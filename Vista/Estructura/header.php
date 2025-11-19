@@ -114,15 +114,11 @@ if ($session->sesionActiva()) {
                 }
 
                 echo '</ul>';
-
-
                 echo '<ul class="navbar-nav">';
 
                 // icono del carrito (siempre visible)
                 $cartUrl = '/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php';
-
                 echo '<li class="nav-item"><a class="nav-link position-relative" href="'.htmlspecialchars($cartUrl).'" aria-label="Ver carrito">'
-
 				. '<img src="/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/IconShop.png" alt="Carrito" style="width: 24px; height: 24px;">'
     			. '';
 
@@ -135,11 +131,8 @@ if ($session->sesionActiva()) {
                 if (!empty($menuData['right'])) {
 
                     foreach ($menuData['right'] as $item) {
-
                         $url = isset($item['url']) ? $item['url'] : '#';
-
                         $label = isset($item['label']) ? $item['label'] : (isset($item['nombre']) ? $item['nombre'] : 'Accion');
-
                         echo '<li class="nav-item"><a class="nav-link" href="'.htmlspecialchars($url).'">'.htmlspecialchars($label).'</a></li>';
 
                     }
@@ -193,9 +186,6 @@ if ($session->sesionActiva()) {
             }
 
             ?>
-
         </div>
-
     </div>
-
 </nav>
