@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../Modelo/usuario.php';
 
 class UsuarioControl
 {
@@ -128,6 +129,13 @@ class UsuarioControl
     public function alta($param)
     {
         $resp = false;
+        // Hash password before creating user
+        if (isset($param['uspass'])) {
+            // if not already a valid password hash, hash it
+            if (!password_get_info($param['uspass'])['algo']) {
+                $param['uspass'] = password_hash($param['uspass'], PASSWORD_DEFAULT);
+            }
+        }
         $Objusuario = $this->cargarObjeto($param);
         if ($Objusuario != null and $Objusuario->insertar()) {
             $resp = true;
@@ -142,6 +150,13 @@ class UsuarioControl
     public function altaSinID($param)
     {
         $resp = false;
+
+        // Hash password before creating user
+        if (isset($param['uspass'])) {
+            if (!password_get_info($param['uspass'])['algo']) {
+                $param['uspass'] = password_hash($param['uspass'], PASSWORD_DEFAULT);
+            }
+        }
 
         $objUsuario = $this->cargarObjetoSinID($param);
         if ($objUsuario != null and $objUsuario->insertar()) {

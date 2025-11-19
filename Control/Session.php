@@ -4,10 +4,17 @@ class Session
 {
     public function __construct()
     {
-        if (!session_start()) {
-            return false;
-        } else {
-            return true;
+        // Start session only if not already active to avoid PHP notices
+        if (php_sapi_name() !== 'cli') {
+            if (version_compare(PHP_VERSION, '5.4.0', '>=')) {
+                if (session_status() !== PHP_SESSION_ACTIVE) {
+                    session_start();
+                }
+            } else {
+                if (session_id() === '') {
+                    session_start();
+                }
+            }
         }
     }
 
@@ -93,10 +100,15 @@ class Session
         $resp = false;
         if ($this->activa()) {
             $objUsuarioC = new UsuarioControl();
-            $param = array("usnombre" => $usNombre, 'uspass' => $usPsw);
+            // Buscamos por nombre de usuario y luego verificamos la contraseña
+            $param = array("usnombre" => $usNombre);
             $listaUsuario = $objUsuarioC->buscar($param);
             if (!empty($listaUsuario)) {
-                $resp = true;
+                $usuario = $listaUsuario[0];
+                $hash = $usuario->getUsPass();
+                if (password_verify($usPsw, $hash)) {
+                    $resp = true;
+                }
             }
         }
         return $resp;

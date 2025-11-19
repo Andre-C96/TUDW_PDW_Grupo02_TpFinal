@@ -152,10 +152,16 @@ CREATE TABLE `rol` (
 CREATE TABLE `usuario` (
   `idusuario` bigint(20) NOT NULL,
   `usnombre` varchar(50) NOT NULL,
-  `uspass` int(11) NOT NULL,
+  `uspass` varchar(255) NOT NULL,
   `usmail` varchar(50) NOT NULL,
   `usdeshabilitado` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+INSERT INTO `usuario` (`idusuario`, `usnombre`, `uspass`, `usmail`, `usdeshabilitado`) VALUES
+(1, 'admin', '$2y$12$cKx2pwLmswEWbjbBsXNgK.Hm4jpAu3oOunx3OOp9Gn0se0hp/2Lki', 'admin@gmail.com', NULL),
+(2, 'cliente', '$2y$12$u2y9hcZ5C96Y5Z2Y5aQCXOEYzDvhN0.qzsQYVsG2sto5Gw1w30D.O', 'andree.crespillo@gmail.com', NULL),
+(3, 'deposito', '$2y$10$0Inu/1b4DNjUV5pljkMetu0v/STUvwVoghKULs505JAHpGxoTKboO', 'desposito@gmail.com', NULL);
 
 -- --------------------------------------------------------
 
