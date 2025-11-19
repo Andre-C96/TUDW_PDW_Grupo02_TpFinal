@@ -144,6 +144,8 @@ if ($session->sesionActiva()) {
                     echo '<li class="nav-item"><a class="nav-link nav-user-icon" href="/TUDW_PDW_Grupo02_TpFinal/Vista/login.php" aria-label="Iniciar sesión">'
                         . '<img src="/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/IconLogin.png" alt="Usuario" style="width: 24px; height: 24px;">'
 						. '';
+
+						echo '</a></li>';
                 }
 
                 echo '</ul>';
@@ -181,6 +183,7 @@ if ($session->sesionActiva()) {
                    echo '<li class="nav-item"><a class="nav-link nav-user-icon" href="/TUDW_PDW_Grupo02_TpFinal/Vista/login.php" aria-label="Iniciar sesión">'
                         . '<img src="/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/IconLogin.png" alt="Usuario" style="width: 24px; height: 24px;">'
 						. '';
+						echo '</a></li>';
                 echo '</ul>';
 
             }
