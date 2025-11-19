@@ -323,4 +323,25 @@ class ProductoControl
         return $arreglo_salida;
     }
 
+    /**
+     * Modifica únicamente el stock de un producto (usado por rol deposito)
+     * @param array $param ['idproducto'=>int, 'procantstock'=>int]
+     * @return boolean
+     */
+    public function modificarStock($param)
+    {
+        $resp = false;
+        if (!empty($param) && isset($param['idproducto']) && isset($param['procantstock'])) {
+            $objProducto = $this->cargarObjetoConClave($param);
+            if ($objProducto != null) {
+                $objProducto->cargar();
+                $objProducto->setProCantStock(intval($param['procantstock']));
+                if ($objProducto->modificar()) {
+                    $resp = true;
+                }
+            }
+        }
+        return $resp;
+    }
+
 }

@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../../Control/compraControl.php';
 
 $session = new Session();
 if (!$session->sesionActiva()) {
-    header('Location: /Vista/login.php');
+    header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/login.php');
     exit;
 }
 
@@ -17,9 +17,9 @@ $result = $compraCtrl->ejecutarCompraCarrito();
 // $result expected: ['idcompra' => int, 'respuesta' => bool]
 if (is_array($result) && isset($result['respuesta']) && $result['respuesta']) {
     $id = $result['idcompra'] ?? '';
-    header('Location: /Vista/compra/confirmacion.php?id=' . urlencode($id));
+    header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/listado.php?msg=compra_ok&id=' . urlencode($id));
     exit;
 } else {
-    header('Location: /Vista/compra/listado.php?error=1');
+    header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/listado.php?error=1');
     exit;
 }

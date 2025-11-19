@@ -10,8 +10,8 @@
 
 <!-- Scripts: jQuery (slim) y Bootstrap bundle -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="/Vista/Estructura/js/bootstrap.bundle.min.js"></script>
-<script src="/Vista/Estructura/js/main.js"></script>
+<script src="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/js/bootstrap.bundle.min.js"></script>
+<script src="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/js/main.js"></script>
 
 </body>
 </html>
