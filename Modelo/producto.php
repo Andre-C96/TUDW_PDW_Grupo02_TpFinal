@@ -109,7 +109,7 @@ class Producto extends BaseDatos
         ."', procantstock='". $this->getProCantStock()
         ."', precio='". $this->getPrecio()
         ."', prodeshabilitado='". $this->getProDeshabilitado()
-        ."', imagen='". $this->getImagen()
+        ."', proimagen='". $this->getImagen()
         ."' WHERE idproducto='".$this->getID()."'";
         if ($this->Iniciar()) {
             if ($this->Ejecutar($sql)) {
