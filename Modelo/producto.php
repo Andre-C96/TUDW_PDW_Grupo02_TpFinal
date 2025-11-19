@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/Conector/BaseDatos.php';
 
 class Producto extends BaseDatos
 {

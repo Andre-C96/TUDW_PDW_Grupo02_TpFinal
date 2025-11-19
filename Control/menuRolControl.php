@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../Modelo/menuRol.php';
+require_once __DIR__ . '/../Modelo/menu.php';
+require_once __DIR__ . '/../Modelo/rol.php';
 
 class MenuRolControl
 {

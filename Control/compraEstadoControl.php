@@ -1,5 +1,10 @@
 <?php
 require_once __DIR__ . '/Mailer.php';
+require_once __DIR__ . '/../Modelo/compraEstado.php';
+require_once __DIR__ . '/../Modelo/compra.php';
+require_once __DIR__ . '/../Modelo/compraEstadoTipo.php';
+require_once __DIR__ . '/../Modelo/compraItem.php';
+require_once __DIR__ . '/compraItemControl.php';
 
 class CompraEstadoControl
 {

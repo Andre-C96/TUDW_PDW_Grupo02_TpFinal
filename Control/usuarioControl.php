@@ -1,5 +1,10 @@
 <?php
 require_once __DIR__ . '/../Modelo/usuario.php';
+require_once __DIR__ . '/../Modelo/usuarioRol.php';
+require_once __DIR__ . '/usuarioRolControl.php';
+require_once __DIR__ . '/compraControl.php';
+require_once __DIR__ . '/compraEstadoControl.php';
+require_once __DIR__ . '/rolControl.php';
 
 class UsuarioControl
 {

@@ -1,4 +1,10 @@
 <?php
+require_once __DIR__ . '/../Modelo/menu.php';
+require_once __DIR__ . '/../Modelo/menuRol.php';
+require_once __DIR__ . '/../Modelo/rol.php';
+require_once __DIR__ . '/../Control/menuRolControl.php';
+require_once __DIR__ . '/../Control/rolControl.php';
+require_once __DIR__ . '/../Control/Session.php';
 
 class MenuControl
 {
