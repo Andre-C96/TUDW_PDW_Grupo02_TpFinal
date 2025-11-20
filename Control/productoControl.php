@@ -136,7 +136,7 @@ class ProductoControl
     //             $resp = true;
     //         }
     //     }
-        
+
     //     return $resp;
     // }
 
@@ -193,7 +193,7 @@ class ProductoControl
             $cImagen = new ControlImagenes();
             $cImagen->eliminarImagen($param['url'], 'productos/');
             $arreglo = $cImagen->cargarImagen('producto', $param['files']['imagen'], 'productos/');
-            if($arreglo['respuesta']){
+            if ($arreglo['respuesta']) {
                 $objProducto->setImagen($arreglo['nombre']);
                 if ($objProducto != null and $objProducto->modificar()) {
                     $resp = true;
@@ -227,12 +227,13 @@ class ProductoControl
             if (isset($param['precio'])) {
                 $where .= " and precio ='" . $param['precio'] . "'";
             }
-            if (isset($param['prodeshabilitado'])) {
-                $where .= " and prodeshabilitado ='" . $param['prodeshabilitado'] . "'";
-            }
             if (isset($param['proimagen'])) {
                 $where .= " and proimagen ='" . $param['proimagen'] . "'";
             }
+            if (isset($param['prodeshabilitado'])) {
+                $where .= " and prodeshabilitado ='" . $param['prodeshabilitado'] . "'";
+            }
+
         }
 
         $objProducto = new Producto();
@@ -319,7 +320,7 @@ class ProductoControl
                     array_push($arreglo_salida, $nuevoElem);
                 }
             }
-            
+
         }
         return $arreglo_salida;
     }
