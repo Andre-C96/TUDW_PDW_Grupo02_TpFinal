@@ -3,6 +3,20 @@
 require_once __DIR__ . '/Estructura/header.php';
 require_once __DIR__ . '/../Control/Session.php';
 require_once __DIR__ . '/../Control/compraControl.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Carbon\Carbon;
+
+/**
+ * Formatea la fecha de compra para mostrar al usuario
+ * @param string $fechaBD Fecha desde la base de datos
+ * @return string Fecha formateada
+ */
+function formatearFechaCompra($fechaBD) {
+    Carbon::setLocale('es');
+    $fecha = Carbon::parse($fechaBD);
+    return $fecha->format('d/m/Y H:i') . ' (' . $fecha->diffForHumans() . ')';
+}
 
 $session = new Session();
 if (!$session->sesionActiva()) {
@@ -43,18 +57,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancelar_id']) && iss
             </thead>
             <tbody>
                 <?php foreach ($compras as $c) : ?>
+                    <?php 
+                    // Formatear fecha con Carbon
+                    $fechaFormateada = formatearFechaCompra($c['cofecha']);
+                    
+                    // Verificar si puede cancelar (menos de 24 horas)
+                    $puedeCancelar = $compraCtrl->puedeCancelarCompra($c['cofecha']);
+                    
+                    // Calcular fecha estimada de entrega
+                    $fechaEntrega = $compraCtrl->fechaEntregaEstimada($c['cofecha']);
+                    ?>
                     <tr>
                         <td><?php echo htmlspecialchars($c['idcompra']); ?></td>
-                        <td><?php echo htmlspecialchars($c['cofecha']); ?></td>
-                        <td><?php echo htmlspecialchars($c['estado'] ?? ''); ?></td>
+                        <td>
+                            <?php echo htmlspecialchars($fechaFormateada); ?>
+                            <?php if (strtolower($c['estado']) !== 'enviado' && strtolower($c['estado']) !== 'cancelada') : ?>
+                                <br><small class="text-muted">Entrega estimada: <?php echo htmlspecialchars($fechaEntrega); ?></small>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php 
+                            $estadoBadge = 'secondary';
+                            switch(strtolower($c['estado'])) {
+                                case 'iniciada': $estadoBadge = 'info'; break;
+                                case 'aceptada': $estadoBadge = 'success'; break;
+                                case 'enviado': $estadoBadge = 'primary'; break;
+                                case 'cancelada': $estadoBadge = 'danger'; break;
+                            }
+                            ?>
+                            <span class="badge bg-<?php echo $estadoBadge; ?>"><?php echo htmlspecialchars($c['estado'] ?? ''); ?></span>
+                        </td>
                         <td>
                             <a href="/TUDW_PDW_Grupo02_TpFinal/Vista/compra/ver.php?id=<?php echo urlencode($c['idcompra']); ?>" class="btn btn-sm btn-outline-primary">Ver</a>
                             <?php if (strtolower($c['estado']) !== 'enviado' && strtolower($c['estado']) !== 'cancelada') : ?>
-                                <form method="post" style="display:inline;">
-                                    <input type="hidden" name="cancelar_id" value="<?php echo htmlspecialchars($c['idcompra']); ?>">
-                                    <input type="hidden" name="cancelar_estado" value="<?php echo htmlspecialchars($c['idcompraestado']); ?>">
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas cancelar esta compra?');">Cancelar</button>
-                                </form>
+                                <?php if ($puedeCancelar) : ?>
+                                    <form method="post" style="display:inline;">
+                                        <input type="hidden" name="cancelar_id" value="<?php echo htmlspecialchars($c['idcompra']); ?>">
+                                        <input type="hidden" name="cancelar_estado" value="<?php echo htmlspecialchars($c['idcompraestado']); ?>">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Seguro que deseas cancelar esta compra?');">Cancelar</button>
+                                    </form>
+                                <?php else : ?>
+                                    <button class="btn btn-sm btn-secondary" disabled title="Solo se pueden cancelar compras con menos de 24 horas">Cancelar</button>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </td>
                     </tr>
