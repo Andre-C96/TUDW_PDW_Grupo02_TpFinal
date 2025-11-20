@@ -268,20 +268,33 @@ class UsuarioControl
     }
 
     public function obtenerCarrito($idUsuario)
-    { //parametro es $sesion->getIDUsuarioLogueado()
-        //Devuelve los compraItem del carrito.
-        $encontrado = false;
-        $objCompra = new CompraControl();
+    { 
         $compraEncontrada = null;
+        $objCompra = new CompraControl();
+        
+        // 1. Buscamos todas las compras del usuario
         $listaCompras = $objCompra->buscar(['idusuario' => $idUsuario]);
-        if (count($listaCompras) > 0) { //CHEQUEO QUE TENGA COMPRAS
+        
+        if (count($listaCompras) > 0) {
+            // 2. Recorremos las compras para ver sus estados
             foreach ($listaCompras as $compraActual) {
                 $objCompraEstado = new CompraEstadoControl();
                 $listaCompraEstados = $objCompraEstado->buscar(['idcompra' => $compraActual->getID()]);
 
-                foreach ($listaCompraEstados as $elem) {
-                    if ($elem->getObjCompraEstadoTipo()->getID() == 5 && ($elem->getCeFechaFin() == '0000-00-00 00:00:00' || $elem->getCeFechaFin() == null)) {
-                        $compraEncontrada = $elem->getObjCompra();
+                // Si tiene estados...
+                if (!empty($listaCompraEstados)) {
+                    // Obtenemos el ÚLTIMO estado (el actual)
+                    $ultimoEstado = end($listaCompraEstados);
+                    $idTipoEstado = $ultimoEstado->getObjCompraEstadoTipo()->getID();
+                    $fechaFin = $ultimoEstado->getCeFechaFin();
+
+                    // 3. VALIDACIÓN:
+                    // Buscamos Estado 1 (Iniciada/Borrador)
+                    // Y que la fecha fin sea nula o ceros (esté activa)
+                    if ($idTipoEstado == 1 && ($fechaFin == null || $fechaFin == '0000-00-00 00:00:00')) {
+                        $compraEncontrada = $compraActual;
+                        // ¡Encontramos el carrito! Cortamos el bucle.
+                        break; 
                     }
                 }
             }

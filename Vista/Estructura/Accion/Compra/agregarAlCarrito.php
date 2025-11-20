@@ -1,138 +1,141 @@
 <?php
-// Asegúrate de que estos archivos existan y se llamen EXACTAMENTE así en tu carpeta Control
-require_once __DIR__ . '/../../../../Control/Session.php';
-require_once __DIR__ . '/../../../../Control/compraControl.php';
-require_once __DIR__ . '/../../../../Control/compraEstadoControl.php';
-require_once __DIR__ . '/../../../../Control/productoControl.php'; 
+// Vista/Estructura/Accion/Compra/agregarAlCarrito.php
 
-// OJO: Verifica si tu archivo se llama 'compraItemControl.php' o 'compraProductoControl.php'
-// La clase dentro debe coincidir con el new ...() de abajo.
-// Asumo que es compraItemControl por la lógica de la DB.
-if (file_exists(__DIR__ . '/../../../../Control/compraItemControl.php')) {
-    require_once __DIR__ . '/../../../../Control/compraItemControl.php';
+// 1. CONFIGURACIÓN DE RUTAS
+// Definimos la raíz del proyecto subiendo 4 niveles desde este archivo
+$root = __DIR__ . '/../../../../';
+
+require_once $root . 'Control/Session.php';
+require_once $root . 'Control/compraControl.php';
+require_once $root . 'Control/compraEstadoControl.php';
+require_once $root . 'Control/productoControl.php';
+
+// Detectar si el control de items se llama CompraItemControl o CompraProductoControl
+if (file_exists($root . 'Control/compraItemControl.php')) {
+    require_once $root . 'Control/compraItemControl.php';
+    $claseItem = 'CompraItemControl';
+} elseif (file_exists($root . 'Control/compraProductoControl.php')) {
+    require_once $root . 'Control/compraProductoControl.php';
+    $claseItem = 'CompraProductoControl';
 } else {
-    require_once __DIR__ . '/../../../../Control/compraProductoControl.php';
+    // Por defecto probamos CompraItemControl
+    require_once $root . 'Control/compraItemControl.php';
+    $claseItem = 'CompraItemControl';
 }
 
 $session = new Session();
 
-// 1. Validar sesión activa
+// 2. VALIDAR SESIÓN
 if (!$session->activa()) {
-    // CORRECCIÓN RUTA: Ajusta "TUDW_PDW_Grupo02_TpFinal" si tu carpeta se llama distinto
     header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/login.php');
     exit;
 }
 
-// 2. CORRECCIÓN: El método correcto según tu Session.php
-$idUsuario = $session->getIDUsuarioLogueado(); 
-$idProducto = $_GET['idProducto'] ?? null;
+// 3. OBTENER DATOS (Usuario y Producto)
+// Intentamos obtener el ID del usuario con los métodos estándar
+if (method_exists($session, 'getIDUsuarioLogueado')) {
+    $idUsuario = $session->getIDUsuarioLogueado();
+} else {
+    $idUsuario = $session->getIdUsuario();
+}
+
+// Recibimos el ID del producto (GET o POST)
+$idProducto = $_GET['idProducto'] ?? ($_POST['idProducto'] ?? null);
 
 if (!$idProducto) {
-    header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php');
+    // Si no llega el ID, volvemos a la tienda con error
+    header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=no_id_producto');
     exit;
 }
 
+// 4. INICIALIZAR CONTROLADORES
 $abmCompra = new CompraControl();
 $abmCompraEstado = new CompraEstadoControl();
+$abmItem = new $claseItem(); // Instancia dinámica del control de items
 
-// Buscar compras del usuario
-$comprasUsuario = $abmCompra->buscar(['idusuario' => $idUsuario]); // Ojo: idusuario suele ser minúscula en la BD/PDO
+// 5. BUSCAR CARRITO ACTIVO (Compra con estado "iniciada")
+$comprasUsuario = $abmCompra->buscar(['idusuario' => $idUsuario]);
 $idCompraActiva = null;
 
-// Lógica para buscar carrito activo (estado 1: iniciada)
 if (!empty($comprasUsuario)) {
-    // Recorremos buscando una que tenga estado 'iniciada' (1) y fecha fin null
+    // Recorremos las compras para ver cuál está activa
     foreach ($comprasUsuario as $compra) {
-        // Buscamos el estado más reciente de esa compra
-        $listaEstados = $abmCompraEstado->buscar(['idcompra' => $compra->getId()]);
+        $estados = $abmCompraEstado->buscar(['idcompra' => $compra->getId()]);
         
-        if (!empty($listaEstados)) {
-            // Obtenemos el último estado (asumiendo que buscar devuelve ordenado o el ultimo array es el actual)
-            $ultimoEstado = end($listaEstados);
+        if (!empty($estados)) {
+            // Obtenemos el último estado de esta compra
+            $ultimoEstado = end($estados);
             
-            // Si el estado es 1 (iniciada) y fecha fin es null (es el actual)
-            if ($ultimoEstado->getCompraEstadoTipo()->getId() == 1 && $ultimoEstado->getCeFechaFin() == null) {
+            // CORRECCIÓN CLAVE AQUÍ:
+            // Usamos getObj... para traer el objeto tipo
+            // Usamos getID() con mayúscula como está en tu clase
+            // Verificamos que sea tipo 1 (iniciada) y fecha fin nula (actual)
+            if ($ultimoEstado->getObjCompraEstadoTipo()->getID() == 1 && $ultimoEstado->getCeFechaFin() == null) {
                 $idCompraActiva = $compra->getId();
-                break;
+                break; 
             }
         }
     }
 }
 
-// Si no hay carrito activo, crear uno nuevo
+// 6. SI NO HAY CARRITO, CREAR UNO NUEVO
 if ($idCompraActiva == null) {
-    // Crear compra
+    // Crear la compra (cabecera)
     if ($abmCompra->alta(['idusuario' => $idUsuario])) {
-        // Obtener el ID de la compra recién creada
+        // Recuperamos el ID de la compra recién creada
         $compras = $abmCompra->buscar(['idusuario' => $idUsuario]);
         $ultimaCompra = end($compras);
         $idCompraActiva = $ultimaCompra->getId();
         
-        // Ponerle estado "iniciada" (1)
-        $abmCompraEstado->alta(['idcompra' => $idCompraActiva, 'idcompraestadotipo' => 1]);
+        // Asignar el estado inicial (1 = iniciada)
+        $abmCompraEstado->alta([
+            'idcompra' => $idCompraActiva, 
+            'idcompraestadotipo' => 1
+        ]);
     } else {
-        header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/index.php?msg=error_crear_compra');
+        header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=error_crear_compra');
         exit;
     }
 }
 
-// Instanciar controles de items
-
-$abmCompraItem = new CompraItemControl(); 
-$abmProducto = new ProductoControl();
-
-// Verificar si el producto ya está en el carrito
-$itemsEnCarrito = $abmCompraItem->buscar([
+// 7. GESTIONAR EL ITEM (Agregar nuevo o sumar cantidad)
+$itemsEnCarrito = $abmItem->buscar([
     'idcompra' => $idCompraActiva,
     'idproducto' => $idProducto
 ]);
 
 $exito = false;
 
-// Verificar Stock del producto
-$listaProductos = $abmProducto->buscar(['idproducto' => $idProducto]);
-if (empty($listaProductos)) {
-     header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/index.php?msg=producto_no_existe");
-     exit;
-}
-$prodObj = $listaProductos[0];
-
-
-if ($prodObj->getProCantStock() >= 1) { // Usar getProCantStock() según tu tabla
-
-    if (!empty($itemsEnCarrito)) {
-        // El producto YA está en el carrito: Sumar cantidad
-        $itemExistente = $itemsEnCarrito[0];
-        $nuevaCantidad = $itemExistente->getCiCantidad() + 1; // Usar getCiCantidad()
-        
-        $param = [
-            'idcompraitem' => $itemExistente->getId(),
-            'idcompra' => $idCompraActiva,
-            'idproducto' => $idProducto,
-            'cicantidad' => $nuevaCantidad
-        ];
-        $exito = $abmCompraItem->modificacion($param);
-
-    } else {
-        // El producto NO está: Crear item nuevo
-        $param = [
-            'idcompra' => $idCompraActiva,
-            'idproducto' => $idProducto,
-            'cicantidad' => 1
-        ];
-        $exito = $abmCompraItem->alta($param);
-    }
+if (!empty($itemsEnCarrito)) {
+    // CASO A: El producto YA está en el carrito -> Sumamos +1 a la cantidad
+    $itemExistente = $itemsEnCarrito[0];
+    $nuevaCantidad = $itemExistente->getCiCantidad() + 1;
     
-    
+    $param = [
+        'idcompraitem' => $itemExistente->getId(),
+        'idcompra'     => $idCompraActiva,
+        'idproducto'   => $idProducto,
+        'cicantidad'   => $nuevaCantidad
+    ];
+    $exito = $abmItem->modificacion($param);
+
 } else {
-    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php?msg=sin_stock");
-    exit;
+    // CASO B: El producto NO está en el carrito -> Lo creamos con cantidad 1
+    $param = [
+        'idcompra'   => $idCompraActiva,
+        'idproducto' => $idProducto,
+        'cicantidad' => 1
+    ];
+    $exito = $abmItem->alta($param);
 }
 
+// 8. REDIRECCIÓN FINAL
 if ($exito) {
+    // Éxito: Vamos a ver el carrito
     header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php");
 } else {
-    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/index.php?msg=error_agregar");
+    // Fallo: Volvemos al listado
+    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=error_al_agregar");
 }
 exit;
 ?>

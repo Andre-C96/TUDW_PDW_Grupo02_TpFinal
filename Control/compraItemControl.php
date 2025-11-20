@@ -2,10 +2,11 @@
 require_once __DIR__ . '/../Modelo/compraItem.php';
 require_once __DIR__ . '/../Modelo/producto.php';
 require_once __DIR__ . '/../Modelo/compra.php';
+// Agregamos BaseDatos por si acaso se necesita en listados
+require_once __DIR__ . '/../Modelo/Conector/BaseDatos.php';
 
 class CompraItemControl
 {
-
     public function abm($datos)
     {
         $resp = false;
@@ -28,77 +29,80 @@ class CompraItemControl
     }
 
     /**
-     * Espera como parametro un arreglo asociativo donde las claves coinciden
-     * con los nombres de las variables instancias del objeto
+     * Método ROBUSTO que maneja tanto IDs como Objetos
      * @param array $param
      * @return CompraItem
      */
     private function cargarObjeto($param)
     {
         $obj = null;
-        if (
-            array_key_exists('idcompraitem', $param) &&
-            array_key_exists('idproducto', $param) &&
-            array_key_exists('idcompra', $param) &&
-            array_key_exists('cicantidad', $param)
-        ) {
+
+        // 1. VERIFICAR SI ES UN ITEM EXISTENTE O NUEVO
+        if (array_key_exists('idcompraitem', $param) && $param['idcompraitem'] != null) {
+            // Es una modificación o baja: cargamos el objeto existente
             $obj = new CompraItem();
-            $producto = new Producto();
-            $compra = new Compra();
-
-            $producto->setID($param['idproducto']);
-            $producto->cargar();
-            $compra->setID($param['idcompra']);
-            $compra->cargar();
-
-            $obj->setear($param['idcompraitem'], $producto, $compra, $param['cicantidad']);
-        }
-        return $obj;
-    }
-
-    private function cargarObjetoSinID($param)
-    {
-        $obj = null;
-        if (
-            array_key_exists('idproducto', $param) &&
-            array_key_exists('idcompra', $param) &&
-            array_key_exists('cicantidad', $param)
-        ) {
+            $obj->setID($param['idcompraitem']);
+            if (!$obj->cargar()) {
+                $obj = null;
+            }
+        } else {
+            // Es un alta: creamos objeto vacío
             $obj = new CompraItem();
-            $producto = new Producto();
-            $compra = new Compra();
-
-            $producto->setID($param['idproducto']);
-            $producto->cargar();
-            $compra->setID($param['idcompra']);
-            $compra->cargar();
-
-            $obj->setearSinID($producto, $compra, $param['cicantidad']);
         }
+
+        // 2. SI EL OBJETO ES VÁLIDO, CARGAMOS SUS DATOS
+        if ($obj != null) {
+            
+            // --- CARGAR PRODUCTO ---
+            $objProducto = null;
+            if (array_key_exists('objproducto', $param) && is_object($param['objproducto'])) {
+                $objProducto = $param['objproducto'];
+            } elseif (array_key_exists('idproducto', $param) && $param['idproducto'] != null) {
+                $objProducto = new Producto();
+                $objProducto->setID($param['idproducto']);
+                $objProducto->cargar();
+            }
+            // Usamos el setter individual si existe
+            if ($objProducto != null) {
+                $obj->setObjProducto($objProducto);
+            }
+
+            // --- CARGAR COMPRA ---
+            $objCompra = null;
+            if (array_key_exists('objcompra', $param) && is_object($param['objcompra'])) {
+                $objCompra = $param['objcompra'];
+            } elseif (array_key_exists('idcompra', $param) && $param['idcompra'] != null) {
+                $objCompra = new Compra();
+                $objCompra->setID($param['idcompra']);
+                $objCompra->cargar();
+            }
+            // Usamos el setter individual
+            if ($objCompra != null) {
+                $obj->setObjCompra($objCompra);
+            }
+
+            // --- CARGAR CANTIDAD ---
+            if (array_key_exists('cicantidad', $param)) {
+                $obj->setCiCantidad($param['cicantidad']);
+            }
+        }
+
         return $obj;
     }
 
     /**
-     * Espera como parametro un arreglo asociativo donde las claves coinciden
-     * con los nombres de las variables instancias del objeto que son claves
-     * @param array $param
-     * @return CompraItem
+     * Método auxiliar para bajas (solo necesita el ID)
      */
     private function cargarObjetoConClave($param)
     {
         $obj = null;
         if (isset($param['idcompraitem'])) {
             $obj = new CompraItem();
-            $obj->setear($param['idcompraitem'], null, null, null);
+            $obj->setID($param['idcompraitem']);
         }
         return $obj;
     }
 
-    /**
-     * Corrobora que dentro del arreglo asociativo estan seteados los campos claves
-     * @param array $param
-     * @return boolean
-     */
     private function seteadosCamposClaves($param)
     {
         $resp = false;
@@ -108,75 +112,48 @@ class CompraItemControl
         return $resp;
     }
 
-    /**
-     *
-     * @param array $param
-     */
     public function alta($param)
     {
         $resp = false;
-        // $param['idrol'] =null;
-        $objcompra = $this->cargarObjeto($param);
-        // verEstructura($Objrol);
-        if ($objcompra != null and $objcompra->insertar()) {
+        // Usamos la función cargarObjeto mejorada
+        $obj = $this->cargarObjeto($param);
+        
+        if ($obj != null and $obj->insertar()) {
             $resp = true;
         }
         return $resp;
     }
 
+    // Mantenemos altaSinID por compatibilidad, pero alta() ya la cubre
     public function altaSinID($param)
     {
-        $resp = false;
-
-        $objProducto = $this->cargarObjetoSinID($param);
-        if ($objProducto != null and $objProducto->insertar()) {
-            $resp = true;
-        }
-        return $resp;
+        return $this->alta($param);
     }
 
-    /**
-     * permite eliminar un objeto
-     * @param array $param
-     * @return boolean
-     */
     public function baja($param)
     {
         $resp = false;
         if ($this->seteadosCamposClaves($param)) {
-            $objcompra = $this->cargarObjetoConClave($param);
-            if ($objcompra != null and $objcompra->eliminar()) {
+            $obj = $this->cargarObjetoConClave($param);
+            if ($obj != null and $obj->eliminar()) {
                 $resp = true;
             }
         }
-
         return $resp;
     }
 
-    /**
-     * permite modificar un objeto
-     * @param array $param
-     * @return boolean
-     */
     public function modificacion($param)
     {
-        // echo "<i>**Realizando la modificación**</i>";
-
         $resp = false;
         if ($this->seteadosCamposClaves($param)) {
-            $objcompra = $this->cargarObjeto($param);
-            if ($objcompra != null and $objcompra->modificar()) {
+            $obj = $this->cargarObjeto($param);
+            if ($obj != null and $obj->modificar()) {
                 $resp = true;
             }
         }
         return $resp;
     }
 
-    /**
-     * permite buscar un objeto
-     * @param array $param
-     * @return array
-     */
     public function buscar($param)
     {
         $where = " true ";
@@ -194,19 +171,9 @@ class CompraItemControl
                 $where .= " and cicantidad ='" . $param['cicantidad'] . "'";
             }
         }
-        $objCI = new CompraItem();
-        $arreglo = $objCI->listar($where);
+        $obj = new CompraItem();
+        $arreglo = $obj->listar($where);
         return $arreglo;
-    }
-
-    public function modificarCantidad($idCompra)
-    {
-        $list = $this->buscar(['idcompra' => $idCompra]);
-        foreach ($list as $objCI) {
-            $nuevaCantidad = $objCI->getObjProducto()->getProCantStock() - $objCI->getCiCantidad();
-            $objCI->getObjProducto()->setProCantStock($nuevaCantidad);
-            $objCI->getObjProducto()->modificar();
-        }
     }
 
     public function listarProductosPorCompra($datos)
@@ -225,7 +192,7 @@ class CompraItemControl
                 array_push($arreglo, $nuevoElem);
             }
         }
-
         return $arreglo;
     }
 }
+?>

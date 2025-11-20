@@ -1,89 +1,108 @@
 <?php
-require_once __DIR__ . '/Mailer.php';
 require_once __DIR__ . '/../Modelo/compraEstado.php';
 require_once __DIR__ . '/../Modelo/compra.php';
 require_once __DIR__ . '/../Modelo/compraEstadoTipo.php';
-require_once __DIR__ . '/../Modelo/compraItem.php';
-require_once __DIR__ . '/compraItemControl.php';
 
 class CompraEstadoControl
 {
+    public function abm($datos)
+    {
+        $resp = false;
+        if ($datos['action'] == 'eliminar') {
+            if ($this->baja($datos)) {
+                $resp = true;
+            }
+        }
+        if ($datos['action'] == 'modificar') {
+            if ($this->modificacion($datos)) {
+                $resp = true;
+            }
+        }
+        if ($datos['action'] == 'alta') {
+            if ($this->alta($datos)) {
+                $resp = true;
+            }
+        }
+        return $resp;
+    }
+
     /**
-     * Espera como parametro un arreglo asociativo donde las claves coinciden
-     * con los nombres de las variables instancias del objeto
-     * @param array $param
-     * @return CompraEstado
+     * Método ROBUSTO para cargar objeto
+     * Acepta IDs u Objetos completos
      */
     private function cargarObjeto($param)
     {
         $obj = null;
-        if (
-            array_key_exists('idcompraestado', $param) &&
-            array_key_exists('idcompra', $param) &&
-            array_key_exists('idcompraestadotipo', $param) &&
-            array_key_exists('cefechaini', $param) &&
-            array_key_exists('cefechafin', $param)
-        ) {
-            $objcompraestadotipo = new CompraEstadoTipo();
-            $objcompra = new Compra();
 
-            $objcompra->setID($param['idcompra']);
-            $objcompraestadotipo->setID($param['idcompraestadotipo']);
-
-            $objcompra->cargar();
-            $objcompraestadotipo->cargar();
-
+        // 1. Verificar si es Edición (viene ID) o Alta (Nuevo)
+        if (array_key_exists('idcompraestado', $param) && $param['idcompraestado'] != null) {
             $obj = new CompraEstado();
-            $obj->setear($param['idcompraestado'], $objcompra, $objcompraestadotipo, $param['cefechaini'], $param['cefechafin']);
+            $obj->setID($param['idcompraestado']);
+            if (!$obj->cargar()) {
+                $obj = null;
+            }
+        } else {
+            $obj = new CompraEstado();
+        }
+
+        if ($obj != null) {
+            // --- CARGAR COMPRA ---
+            $objCompra = null;
+            if (array_key_exists('objcompra', $param) && is_object($param['objcompra'])) {
+                $objCompra = $param['objcompra'];
+            } elseif (array_key_exists('idcompra', $param) && $param['idcompra'] != null) {
+                $objCompra = new Compra();
+                $objCompra->setID($param['idcompra']);
+                $objCompra->cargar();
+            }
+            if ($objCompra != null) {
+                $obj->setObjCompra($objCompra);
+            }
+
+            // --- CARGAR TIPO DE ESTADO ---
+            $objTipo = null;
+            if (array_key_exists('objcompraestadotipo', $param) && is_object($param['objcompraestadotipo'])) {
+                $objTipo = $param['objcompraestadotipo'];
+            } elseif (array_key_exists('idcompraestadotipo', $param) && $param['idcompraestadotipo'] != null) {
+                $objTipo = new CompraEstadoTipo();
+                $objTipo->setID($param['idcompraestadotipo']);
+                $objTipo->cargar();
+            }
+            if ($objTipo != null) {
+                $obj->setObjCompraEstadoTipo($objTipo);
+            }
+
+            // --- FECHAS ---
+            // Fecha Inicio: Si no viene, ponemos la actual
+            if (array_key_exists('cefechaini', $param)) {
+                $obj->setCeFechaIni($param['cefechaini']);
+            } else {
+                // Si es alta nueva y no trae fecha, ponemos NOW()
+                if (!array_key_exists('idcompraestado', $param)) {
+                    $obj->setCeFechaIni(date('Y-m-d H:i:s'));
+                }
+            }
+
+            // Fecha Fin
+            if (array_key_exists('cefechafin', $param)) {
+                $obj->setCeFechaFin($param['cefechafin']);
+            } else {
+                $obj->setCeFechaFin(null);
+            }
         }
         return $obj;
     }
 
-    private function cargarObjetoSinID($param)
-    {
-        $obj = null;
-        if (
-            array_key_exists('idcompra', $param) &&
-            array_key_exists('idcompraestadotipo', $param) &&
-            array_key_exists('cefechaini', $param) &&
-            array_key_exists('cefechafin', $param)
-        ) {
-            $objcompraestadotipo = new CompraEstadoTipo();
-            $objcompra = new Compra();
-
-            $objcompra->setID($param['idcompra']);
-            $objcompraestadotipo->setID($param['idcompraestadotipo']);
-
-            $objcompra->cargar();
-            $objcompraestadotipo->cargar();
-
-            $obj = new CompraEstado();
-            $obj->setearSinID($objcompra, $objcompraestadotipo, $param['cefechaini'], $param['cefechafin']);
-        }
-        return $obj;
-    }
-
-    /**
-     * Espera como parametro un arreglo asociativo donde las claves coinciden
-     * con los nombres de las variables instancias del objeto que son claves
-     * @param array $param
-     * @return CompraEstado
-     */
     private function cargarObjetoConClave($param)
     {
         $obj = null;
         if (isset($param['idcompraestado'])) {
             $obj = new CompraEstado();
-            $obj->setear($param['idcompraestado'], null, null, null, null);
+            $obj->setID($param['idcompraestado']);
         }
         return $obj;
     }
 
-    /**
-     * Corrobora que dentro del arreglo asociativo estan seteados los campos claves
-     * @param array $param
-     * @return boolean
-     */
     private function seteadosCamposClaves($param)
     {
         $resp = false;
@@ -93,71 +112,45 @@ class CompraEstadoControl
         return $resp;
     }
 
-    public function altaSinID($param)
-    {
-        $resp = false;
-
-        $objCE = $this->cargarObjetoSinID($param);
-        if ($objCE != null and $objCE->insertar()) {
-            $resp = true;
-        }
-        return $resp;
-    }
-
-    /**
-     *
-     * @param array $param
-     */
     public function alta($param)
     {
         $resp = false;
-        $objcompraestado = $this->cargarObjeto($param);
-        if ($objcompraestado != null and $objcompraestado->insertar()) {
+        $obj = $this->cargarObjeto($param);
+        if ($obj != null and $obj->insertar()) {
             $resp = true;
         }
         return $resp;
     }
 
-    /**
-     * permite eliminar un objeto
-     * @param array $param
-     * @return boolean
-     */
+    // Mantenemos compatibilidad
+    public function altaSinID($param) {
+        return $this->alta($param);
+    }
+
     public function baja($param)
     {
         $resp = false;
         if ($this->seteadosCamposClaves($param)) {
-            $objcompraestado = $this->cargarObjetoConClave($param);
-            if ($objcompraestado != null and $objcompraestado->eliminar()) {
+            $obj = $this->cargarObjetoConClave($param);
+            if ($obj != null and $obj->eliminar()) {
                 $resp = true;
             }
         }
-
         return $resp;
     }
 
-    /**
-     * permite modificar un objeto
-     * @param array $param
-     * @return boolean
-     */
     public function modificacion($param)
     {
         $resp = false;
         if ($this->seteadosCamposClaves($param)) {
-            $objcompraestado = $this->cargarObjeto($param);
-            if ($objcompraestado != null and $objcompraestado->modificar()) {
+            $obj = $this->cargarObjeto($param);
+            if ($obj != null and $obj->modificar()) {
                 $resp = true;
             }
         }
         return $resp;
     }
 
-    /**
-     * permite buscar un objeto
-     * @param array $param
-     * @return array
-     */
     public function buscar($param)
     {
         $where = " true ";
@@ -178,141 +171,9 @@ class CompraEstadoControl
                 $where .= " and cefechafin ='" . $param['cefechafin'] . "'";
             }
         }
-        $objCE = new CompraEstado();
-        $arreglo = $objCE->listar($where);
+        $obj = new CompraEstado();
+        $arreglo = $obj->listar($where);
         return $arreglo;
-    }
-
-    /**
-     * lista las comprasestado menos los carritos
-     * @param array $param
-     * @return array
-     */
-
-    public function listarCompras($datos)
-    {
-        $arreglo = [];
-        $listaCE = $this->buscar($datos);
-        if (count($listaCE) > 0) {
-            //RECORREMOS EL LISTADO DE COMPRAS ESTADO
-            foreach ($listaCE as $compraEstadoActual) {
-                // SI NO ES UN CARRITO LO SUMAMOS AL ARREGLO
-                if (!($compraEstadoActual->getObjCompraEstadoTipo()->getCetDescripcion() === "carrito")) {
-                    $nuevoElem = [
-                        "idcompra" => $compraEstadoActual->getObjCompra()->getID(),
-                        "cofecha" => $compraEstadoActual->getCeFechaIni(),
-                        "finfecha" => $compraEstadoActual->getCeFechaFin(),
-                        "usnombre" => $compraEstadoActual->getObjCompra()->getObjUsuario()->getUsNombre(),
-                        "estado" => $compraEstadoActual->getObjCompraEstadoTipo()->getCetDescripcion(),
-                        "idcompraestado" => $compraEstadoActual->getID()
-                    ];
-                    array_push($arreglo, $nuevoElem);
-                }
-            }
-        }
-
-        return $arreglo;
-    }
-
-    /**
-     * modifica el estado del compraestado, si es aceptada o cancelada (despues de aceptada) verifica si hay stock suficiente
-     * o devuelve según sea el caso
-     * @param array $param
-     * @return boolean
-     */
-    public function modificarEstado($datos)
-    {
-        $resp = false;
-        $list = $this->buscar(['idcompraestado' => $datos['idcompraestado']]);
-        foreach ($list as $elem) { //RECORREMOS CADA COMPRA ESTADO
-
-            if ($datos['idcompraestadotipo'] == 2) { // SI EL ESTADOTIPO ES ACEPTADA, HAY QUE VERIFICAR SI SE PUEDE CAMBIAR EL STOCK
-                $objCI = new CompraItemControl();
-
-                if ($this->verificarStock($datos['idcompra'])) { // SI HAY MODIFICAMOS LA CANTIDAD DE LOS PRODUCTOS Y FINALMENTE SETEAMOS EL NUEVO COMPRAESTADO
-                    $objCI->modificarCantidad($datos['idcompra']);
-                    $resp = $this->cambiarEstado($datos, $elem);
-                }
-            } else if(($datos['idcompraestadotipo'] == 4) && ($elem->getObjCompraEstadoTipo()->getID() == 2)){ //SI QUIERER CANCELAR UNA COMPRA YA ACEPTADA
-                if ($this->devolverStock($datos['idcompra'])){
-                    $resp = $this->cambiarEstado($datos, $elem);
-                }
-            } else { // SI NO SIMPLEMENTE CAMBIAMOS DE ESTADO
-                $resp = $this->cambiarEstado($datos, $elem);
-            }
-        }
-        // Enviar correo mediante el Control/Mailer.php
-        \Mailer::enviarMail($datos);
-
-        return $resp;
-    }
-
-    /**
-     * verifica si se puede modificar el stock de todos los objetos relacionados a esa compraItem
-     * @param array $param
-     * @return boolean
-     */
-    public function verificarStock($idcompra)
-    {
-        $objCI = new CompraItemControl();
-        $list = $objCI->buscar(['idcompra' => intval($idcompra)]); // ARREGLO DE OBJETOS COMPRAITEM
-        $verficador = true; // INDICARÁ SI SE PUDIERON MODIFICAR EL STOCK DE TODOS LOS PRODUCTOS
-        foreach ($list as $CIactual) {
-            if (!($CIactual->getObjProducto()->getProCantStock() >= $CIactual->getCiCantidad())) {
-                $verficador = false; // SI LA CANTIDAD DE LA COMPRA ES MAYOR AL STOCK NEGAMOS
-            }
-        }
-
-        return $verficador;
-    }
-
-    /**
-     * setea la fecha fin del antiguo estado, y crea el siguiente
-     * @param array $param
-     * @return boolean
-     */
-    public function cambiarEstado($datos, $obj)
-    {
-        $resp = false;
-        date_default_timezone_set('America/Argentina/Buenos_Aires');
-        $fechaFin = date('Y-m-d H:i:s'); //FECHA FIN
-        $obj->setCeFechaFin($fechaFin);
-        
-        if ($obj->modificar()) { // SI SE PUDO MODIFICAR EL ESTADO ANTERIOR, AGREGAMOS EL NUEVO
-
-            $arregloNewCompra = [
-                'idcompra' => $datos['idcompra'],
-                'idcompraestadotipo' => $datos['idcompraestadotipo'],
-                'cefechaini' => $fechaFin,
-                'cefechafin' => null,
-            ];
-
-            $resp = $this->altaSinID($arregloNewCompra);
-        }
-
-        return $resp;
-    }
-
-    /**
-    * devuelve el stock de esa compra
-    * @param array $param
-    * @return boolean
-    */
-    public function devolverStock($idcompra){
-        $resp = true;
-        $objCI = new CompraItemControl();
-        $list = $objCI->buscar(['idcompra' => intval($idcompra)]);
-        foreach($list as $CIactual){
-            $stockProducto = $CIactual->getObjProducto()->getProCantStock(); // STOCK ACTUAL
-            $cantidad = $CIactual->getCiCantidad(); // CANTIDAD A DEVOLVER
-
-            $CIactual->getObjProducto()->setProCantStock($stockProducto + $cantidad); // SETEAMOS EL NUEVO STOCK
-
-            if (!$CIactual->getObjProducto()->modificar()){ // MODIFICAMOS
-                $resp = false;
-            }
-        }
-
-        return $resp;
     }
 }
+?>

@@ -6,6 +6,8 @@ require_once __DIR__ . '/../Modelo/compraItem.php';
 require_once __DIR__ . '/compraItemControl.php';
 require_once __DIR__ . '/Session.php';
 require_once __DIR__ . '/usuarioControl.php';
+// Asegúrate de tener acceso a BaseDatos para el listado SQL
+require_once __DIR__ . '/../Modelo/Conector/BaseDatos.php'; 
 
 class CompraControl
 {
@@ -32,27 +34,57 @@ class CompraControl
     }
 
     /**
-     * Espera como parametro un arreglo asociativo donde las claves coinciden
-     * con los nombres de las variables instancias del objeto
+     * --- CORREGIDO PARA EVITAR EL ERROR DE OBJUSUARIO ---
+     * Espera como parametro un arreglo asociativo 
      * @param array $param
      * @return Compra
      */
     private function cargarObjeto($param)
     {
-        $objUsuario = new Usuario();
-        $objUsuario->setID($param['objusuario']);
-        $objUsuario->cargar();
         $obj = null;
-        if (
-            array_key_exists('idcompra', $param) &&
-            array_key_exists('cofecha', $param) &&
-            array_key_exists('objusuario', $param)
-        ) {
+        
+        // 1. Verificamos si viene el ID de compra para cargar una existente o crear vacía
+        if (array_key_exists('idcompra', $param) and $param['idcompra'] != null) {
             $obj = new Compra();
-            $obj->setear($param['idcompra'], $param['cofecha'], $param['objusuario']);
+            $obj->setID($param['idcompra']);
+            if (!$obj->cargar()) {
+                $obj = null;
+            }
+        } else {
+            $obj = new Compra();
+        }
+
+        // 2. Asignamos el Usuario y la Fecha si el objeto es válido
+        if ($obj != null) {
+            
+            // LOGICA ROBUSTA PARA EL USUARIO
+            $objUsuario = null;
+            
+            // Caso A: Viene el objeto Usuario entero
+            if (array_key_exists('objusuario', $param) && is_object($param['objusuario'])) {
+                $objUsuario = $param['objusuario'];
+            }
+            // Caso B: Viene el ID de usuario (lo más común)
+            elseif (array_key_exists('idusuario', $param) && $param['idusuario'] != null) {
+                $objUsuario = new Usuario();
+                $objUsuario->setID($param['idusuario']);
+                $objUsuario->cargar();
+            }
+
+            // Si encontramos usuario, lo seteamos
+            if ($objUsuario != null) {
+                $obj->setObjUsuario($objUsuario);
+            }
+
+            // Seteamos la fecha si viene
+            if (array_key_exists('cofecha', $param)) {
+                $obj->setCoFecha($param['cofecha']);
+            }
         }
         return $obj;
     }
+
+    // Mantenemos este por compatibilidad si lo usas en otro lado
     private function cargarObjetoSinID($param)
     {
         $obj = null;
@@ -61,9 +93,7 @@ class CompraControl
             array_key_exists('idusuario', $param)
         ) {
             $objusuario = new Usuario();
-
             $objusuario->setID($param['idusuario']);
-
             $objusuario->cargar();
 
             $obj = new Compra();
@@ -72,12 +102,6 @@ class CompraControl
         return $obj;
     }
 
-    /**
-     * Espera como parametro un arreglo asociativo donde las claves coinciden
-     * con los nombres de las variables instancias del objeto que son claves
-     * @param array $param
-     * @return Compra
-     */
     private function cargarObjetoConClave($param)
     {
         $obj = null;
@@ -88,11 +112,6 @@ class CompraControl
         return $obj;
     }
 
-    /**
-     * Corrobora que dentro del arreglo asociativo estan seteados los campos claves
-     * @param array $param
-     * @return boolean
-     */
     private function seteadosCamposClaves($param)
     {
         $resp = false;
@@ -102,16 +121,10 @@ class CompraControl
         return $resp;
     }
 
-    /**
-     *
-     * @param array $param
-     */
     public function alta($param)
     {
         $resp = false;
-        // $param['idrol'] =null;
         $objcompra = $this->cargarObjeto($param);
-        // verEstructura($Objrol);
         if ($objcompra != null and $objcompra->insertar()) {
             $resp = true;
         }
@@ -121,7 +134,6 @@ class CompraControl
     public function altaSinID($param)
     {
         $resp = false;
-
         $objCompra = $this->cargarObjetoSinID($param);
         if ($objCompra != null and $objCompra->insertar()) {
             $resp = true;
@@ -129,11 +141,6 @@ class CompraControl
         return $resp;
     }
 
-    /**
-     * permite eliminar un objeto
-     * @param array $param
-     * @return boolean
-     */
     public function baja($param)
     {
         $resp = false;
@@ -143,19 +150,11 @@ class CompraControl
                 $resp = true;
             }
         }
-
         return $resp;
     }
 
-    /**
-     * permite modificar un objeto
-     * @param array $param
-     * @return boolean
-     */
     public function modificacion($param)
     {
-        // echo "<i>**Realizando la modificación**</i>";
-
         $resp = false;
         if ($this->seteadosCamposClaves($param)) {
             $objcompra = $this->cargarObjeto($param);
@@ -166,11 +165,6 @@ class CompraControl
         return $resp;
     }
 
-    /**
-     * permite buscar un objeto
-     * @param array $param
-     * @return array
-     */
     public function buscar($param)
     {
         $where = " true ";
@@ -192,8 +186,55 @@ class CompraControl
 
     /*############### FUNCIONES QUE UTILIZAN LOS ACTION #######################*/
 
-    /* AGREGAR PRODUCTO AL CARRITO */
+    /* LISTAR PRODUCTOS CARRITO (VERSIÓN SQL ROBUSTA) */
+    // Usamos SQL directo para asegurarnos de traer 'proimagen' y 'precio'
+    // aunque la clase Producto no esté actualizada.
+    public function listadoProdCarrito($carrito)
+    {
+        $arreglo = [];
+        
+        if ($carrito != null) {
+            $base = new BaseDatos();
+            $idCompra = $carrito->getID();
+            
+            // JOIN entre compraitem y producto para traer todo junto
+            $sql = "SELECT 
+                        ci.idcompraitem, 
+                        ci.cicantidad, 
+                        p.idproducto, 
+                        p.pronombre, 
+                        p.prodetalle, 
+                        p.precio,      
+                        p.proimagen    
+                    FROM compraitem ci
+                    INNER JOIN producto p ON ci.idproducto = p.idproducto
+                    WHERE ci.idcompra = " . $idCompra;
 
+            if ($base->Iniciar()) {
+                $res = $base->Ejecutar($sql);
+                if ($res > -1) {
+                    if ($res > 0) {
+                        while ($row = $base->Registro()) {
+                            $arreglo[] = [
+                                'idcompraitem' => $row['idcompraitem'],
+                                'cicantidad'   => $row['cicantidad'],
+                                'idproducto'   => $row['idproducto'],
+                                'pronombre'    => $row['pronombre'],
+                                'prodetalle'   => $row['prodetalle'],
+                                'precio'       => $row['precio'],      
+                                'proimagen'    => $row['proimagen']    
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        return $arreglo;
+    }
+    /* FIN LISTAR PRODUCTOS CARRITO */
+
+
+    /* AGREGAR PRODUCTO AL CARRITO */
     public function agregarProdCarrito($data)
     {
         $respuesta = false;
@@ -202,27 +243,21 @@ class CompraControl
         $idUserLogueado = $objSession->getIDUsuarioLogueado();
         $carrito = $objUsuario->obtenerCarrito($idUserLogueado);
         if ($carrito <> null) {
-            //si el carrito existe agrego el producto
             $respuesta = $this->verificarStockProd($carrito, $data);
             if ($respuesta) {
                 $respuesta = $this->sumarProdCarrito($carrito, $data);
             }
-        } else { //si el carrito no existe lo creo
+        } else { 
             $carritoNuevo = $this->crearCarrito($idUserLogueado);
             if ($carritoNuevo <> null) {
-                //y agrego el producto
                 $respuesta = $this->sumarProdCarrito($carritoNuevo, $data);
             }
         }
-
         return $respuesta;
     }
 
-
     public function sumarProdCarrito($objCompraCarrito, $data)
     {
-        //Agrega el producto con cantidad 1 si no existe
-        //Si el producto existe, le suma 1 a su cantidad
         $respuesta = false;
         $objCompraItemControl = new CompraItemControl();
         $idCompra = $objCompraCarrito->getID();
@@ -231,7 +266,7 @@ class CompraControl
             'idcompra' => $idCompra
         );
         $listaCompraItem = $objCompraItemControl->buscar($param);
-        if (count($listaCompraItem) > 0) { //si existe el producto ya en el carrito solo lo seteo
+        if (count($listaCompraItem) > 0) { 
             $objCompraItemControl = $listaCompraItem[0];
             $idCI = $objCompraItemControl->getID();
             $cantidadCI = $objCompraItemControl->getCiCantidad();
@@ -242,12 +277,11 @@ class CompraControl
                 'idcompra' => $idCompra,
                 'cicantidad' => $nuevaCantCI
             );
-            //print_r($paramCI);
             $respuesta = $objCompraItemControl->modificacion($paramCI);
             if (!$respuesta) {
-                echo "no se modifico";
+                // echo "no se modifico";
             }
-        } else { //si no lo creo y lo uno con el carrito
+        } else { 
             $data['idcompra'] = $idCompra;
             $respuesta = $objCompraItemControl->altaSinID($data);
         }
@@ -265,22 +299,22 @@ class CompraControl
         );
         $respuesta = $objCompraControl->altaSinID($param);
         if (!$respuesta) {
-            echo "no se creo el carrito";
+            // echo "no se creo el carrito";
         }
-        if ($respuesta) { //si se creo el carrito creo el estadocompra
+        if ($respuesta) { 
             $paramIDUsuario['idusuario'] = $idUser;
             $objCompraEstadoControl = new CompraEstadoControl();
             $listaCompras = $this->buscar($paramIDUsuario);
-            $posCompra = count($listaCompras) - 1; //la ultima compra que cree es el carrito
+            $posCompra = count($listaCompras) - 1; 
             $idCompra = $listaCompras[$posCompra]->getID();
             $paramCompraEstado = array(
                 'idcompra' => $idCompra,
                 'idcompraestadotipo' => 5,
-                'cefechaini' => date('Y-m-d H:i:s'), //ver lo de la hora actual
+                'cefechaini' => date('Y-m-d H:i:s'), 
                 'cefechafin' => '0000-00-00 00:00:00'
-            ); // ver el null
+            ); 
             $respuesta = $objCompraEstadoControl->altaSinID($paramCompraEstado);
-            if ($respuesta) { //si se creo el estado compra, devuelvo el carrito
+            if ($respuesta) { 
                 $carrito = $listaCompras[$posCompra];
             }
         }
@@ -288,7 +322,7 @@ class CompraControl
     }
 
     public function verificarStockProd($objCompraCarrito, $data)
-    { //Verifica que la cantidad de stock del producto sea mayor o igual a la nueva cicantidad
+    { 
         $respuesta = false;
         $objCompraItemControl = new CompraItemControl();
         $idCompra = $objCompraCarrito->getID();
@@ -297,7 +331,7 @@ class CompraControl
             'idcompra' => $idCompra
         );
         $listaCompraItem = $objCompraItemControl->buscar($param);
-        if (count($listaCompraItem) > 0) { //si existe el producto en el carrito chequeo con su cicantidad
+        if (count($listaCompraItem) > 0) { 
             $objCompraItemControl = $listaCompraItem[0];
             $nuevaCantCI = $objCompraItemControl->getCiCantidad() + 1;
             $objProductoControl = new ProductoControl();
@@ -309,41 +343,31 @@ class CompraControl
                     $respuesta = true;
                 }
             }
-        } else { //si no existe el producto en el carrito no tengo que chequear ningun stock
+        } else { 
             $respuesta = true;
         }
         return $respuesta;
     }
 
-    /* FIN METODOS PARA AGREGAR PRODUCTO AL CARRITO */
-
-    /* CANCELAR COMPRA */
-
     public function cancelarCompra($data)
     {
-
         $respuesta = false;
         $objCompraEstadoControl = new CompraEstadoControl();
         $list = $objCompraEstadoControl->buscar(['idcompraestado' => $data['idcompraestado']]);
 
-        foreach ($list as $elem) { //RECORREMOS CADA COMPRA ESTADO
+        foreach ($list as $elem) { 
             date_default_timezone_set('America/Argentina/Buenos_Aires');
-            $idCET = $elem->getObjCompraEstadoTipo()->getID(); //OBTENEMOS EL ID DEL TIPO DE ESTADO
-            $fechaIni = $elem->getCeFechaIni(); //FECHA INICIO
-            $fechaFin = date('Y-m-d H:i:s'); //FECHA FIN
+            $idCET = $elem->getObjCompraEstadoTipo()->getID(); 
+            $fechaIni = $elem->getCeFechaIni(); 
+            $fechaFin = date('Y-m-d H:i:s'); 
             $respuesta = $this->cambiarEstado($data, $idCET, $fechaIni, $fechaFin, $objCompraEstadoControl);
         }
 
         return $respuesta;
     }
 
-
-
-
     public function cambiarEstado($data, $idCET, $fechaIni, $fechaFin, $objCE)
     {
-
-        // PRIMERO ACTUALIZAMOS EL ANTIGUO ESTADO, SETEAMOS SU FECHA FIN
         $arregloModCompra = [
             'idcompraestado' => $data['idcompraestado'],
             'idcompra' => $data['idcompra'],
@@ -352,11 +376,9 @@ class CompraControl
             'cefechafin' => $fechaFin,
         ];
 
-        // MODIFICAMOS
         $resp = $objCE->modificacion($arregloModCompra);
 
-        if ($resp) { // SI SE PUDO MODIFICAR EL ESTADO ANTERIOR, AGREGAMOS EL NUEVO
-
+        if ($resp) { 
             $arregloNewCompra = [
                 'idcompra' => $data['idcompra'],
                 'idcompraestadotipo' => $data['idcompraestadotipo'],
@@ -366,14 +388,8 @@ class CompraControl
 
             $res = $objCE->altaSinID($arregloNewCompra);
         }
-
         return $res;
     }
-
-    /* FIN CANCELAR COMPRA */
-
-    /* EJECUTAR COMPRA CARRITO */
-
 
     public function ejecutarCompraCarrito()
     {
@@ -384,10 +400,8 @@ class CompraControl
         return ($this->iniciarCompra($carrito));
     }
 
-
     public function iniciarCompra($carrito)
     {
-        //modificar fechafin del carrito y crear nueva instancia de compraestado, con idcompraestadotipo =1, unido a la compra.
         date_default_timezone_set('America/Argentina/Buenos_Aires');
         $respuesta = false;
         $objCompraEstadoControl = new CompraEstadoControl();
@@ -419,54 +433,14 @@ class CompraControl
                 );
                 $respuesta = $objCompraEstadoControl->modificacion($paramEdicion);
             }
-            // Enviar correo mediante Control/Mailer.php
+            // Enviar correo
             \Mailer::enviarMail(['idcompra' => $idCompra, 'idcompraestadotipo' => 1]);
         }
         return ['idcompra' => $idCompra, 'respuesta' => $respuesta];
     }
 
-    /* FIN EJECUTAR COMPRA CARRITO */
-
-    /* LISTAR PRODUCTOS CARRITO */
-
-    public function listadoProdCarrito($carrito)
-    {
-        $arreglo_salida = [];
-        if ($carrito <> null) {
-            $objCompraItemControl = new CompraItemControl();
-            $arreglo_salida = [];
-            $eltosCarrito = $objCompraItemControl->buscar(['idcompra' => $carrito->getID()]);
-
-            //Recorremos los compraItem del carrito
-            foreach ($eltosCarrito as $compraItem) {
-                $cant = $compraItem->getCiCantidad();
-                $precio = $compraItem->getObjProducto()->getPrecio();
-                $nuevoElem = [
-                    "idcompraitem" => $compraItem->getID(),
-                    "idproducto" => $compraItem->getObjProducto()->getID(),
-                    "idcompra" => $compraItem->getObjCompra()->getID(),
-                    "imagen" => $compraItem->getObjProducto()->getImagen(),
-                    "detalle" => $compraItem->getObjProducto()->getProDetalle(),
-                    "pronombre" => $compraItem->getObjProducto()->getProNombre(),
-                    "precio" => $precio,
-                    "cicantidad" => $cant,
-                    "procantstock" => $compraItem->getObjProducto()->getProCantStock(),
-                    "subtotal" => ($cant * $precio)
-                ];
-
-                array_push($arreglo_salida, $nuevoElem);
-            }
-        }
-        return $arreglo_salida;
-    }
-
-    /* FIN LISTAR PRODUCTOS CARRITO */
-
-    /* VACIAR CARRITO */
-
     public function vaciarCarrito($idCarrito)
     {
-
         $respuesta = false;
         $objCompraItemControl = new CompraItemControl();
         $listaCI = $objCompraItemControl->buscar(['idcompra' => $idCarrito]);
@@ -479,11 +453,8 @@ class CompraControl
         return $respuesta;
     }
 
-    /* FIN VACIAR CARRITO */
-
     public function listarComprasUsuarios()
     {
-        //Lista todos los datos de compra y compraestado referidos a todos los usuarios
         $arreglo = [];
         $objUsuarioControl = new UsuarioControl();
         $users = $objUsuarioControl->buscar(null);
@@ -493,13 +464,11 @@ class CompraControl
                 array_push($arreglo, $arrDatos);
             }
         }
-
         return $arreglo;
     }
 
     public function listarCompras($idUsuario)
     {
-        //Lista las compras con su ultimo estadocompra referidas al usuario con idUsuario
         $arreglo_salida =  [];
         $listaCompras = $this->buscar(['idusuario' => $idUsuario]);
         if (count($listaCompras) > 0) {
@@ -508,11 +477,8 @@ class CompraControl
                 $objCompraEstadoControl = new CompraEstadoControl();
                 $listaCE = $objCompraEstadoControl->buscar(['idcompra' => $elem->getID()]);
                 
-                // Verificar que la lista de estados no esté vacía
                 if (count($listaCE) > 0) {
                     $lastPosCE = count($listaCE) - 1;
-                    //RECORREMOS EL LISTADO DE COMPRAS ESTADO Y SOLO MOSTRAMOS LA ULTIMA CE
-                    //SI ES CARRITO NO LO MOSTRAMOS
                     if (!($listaCE[$lastPosCE]->getObjCompraEstadoTipo()->getCetDescripcion() === "carrito")) {
                         $nuevoElem = [
                             "idcompra" => $listaCE[$lastPosCE]->getObjCompra()->getID(),
