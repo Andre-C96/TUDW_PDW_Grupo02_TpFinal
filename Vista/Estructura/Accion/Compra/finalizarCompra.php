@@ -1,130 +1,111 @@
 <?php
-// Vista/Estructura/Accion/Compra/finalizarCompra.php
 
-// 1. RUTAS
+
+// RUTAS
 $root = __DIR__ . '/../../../../';
 require_once $root . 'Control/Session.php';
 require_once $root . 'Control/compraControl.php';
-require_once $root . 'Control/compraEstadoControl.php';
 require_once $root . 'Control/productoControl.php';
 require_once $root . 'Control/usuarioControl.php';
-require_once $root . 'Control/compraItemControl.php'; // Asegúrate que este nombre sea el que usas
 
-// 2. SESIÓN
+// Aseguramos carga de Composer por si el controlador lo necesita para Carbon/Email
+if (file_exists($root . 'vendor/autoload.php')) {
+    require_once $root . 'vendor/autoload.php';
+}
+
+// SESIÓN
 $session = new Session();
 if (!$session->activa()) {
     header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/login.php');
     exit;
 }
 
-// Obtener ID Usuario de forma segura
+// Obtener ID Usuario
 if (method_exists($session, 'getIDUsuarioLogueado')) {
     $idUsuario = $session->getIDUsuarioLogueado();
 } else {
     $idUsuario = $_SESSION['idusuario'] ?? null;
 }
 
-// 3. BUSCAR EL CARRITO (ESTADO 1)
+// BUSCAR EL CARRITO
 $uControl = new UsuarioControl();
 $carrito = $uControl->obtenerCarrito($idUsuario);
 
 if ($carrito == null) {
-    // No hay carrito para comprar
-    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=carrito_vacio");
+    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=carrito_vacio_error");
     exit;
 }
 
-// 4. OBTENER PRODUCTOS
+// OBTENER PRODUCTOS
 $compraCtrl = new CompraControl();
 $productos = $compraCtrl->listadoProdCarrito($carrito);
 
-if (count($productos) == 0) {
+if (empty($productos)) {
     header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=carrito_vacio");
     exit;
 }
 
-// 5. VALIDAR STOCK (Antes de cobrar, miramos si hay stock de todo)
+// VALIDAR STOCK (Paso preventivo)
 $prodCtrl = new ProductoControl();
 $stockOk = true;
 $msgError = "";
 
 foreach ($productos as $item) {
-    // Buscamos el producto original para ver su stock real
     $listaP = $prodCtrl->buscar(['idproducto' => $item['idproducto']]);
     if (count($listaP) > 0) {
         $objProd = $listaP[0];
         $stockActual = $objProd->getProCantStock();
-        $cantidadSolicitada = $item['cicantidad'];
+        // Si tu array de productos viene con 'cicantidad', úsalo.
+        // Si viene como objeto, ajusta a $item->getCiCantidad()
+        $cantidadSolicitada = is_array($item) ? $item['cicantidad'] : $item->getCiCantidad();
         
         if ($stockActual < $cantidadSolicitada) {
             $stockOk = false;
-            $msgError = "No hay suficiente stock de " . $item['pronombre'];
+            $msgError = "No hay suficiente stock de " . (is_array($item) ? $item['pronombre'] : $objProd->getProNombre());
             break;
         }
     }
 }
 
 if (!$stockOk) {
-    // Si falla el stock, lo devolvemos al carrito con aviso
     header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php?msg=sin_stock&detalle=".urlencode($msgError));
     exit;
 }
 
-// 6. EJECUTAR COMPRA (Si llegamos acá, hay stock)
+// EJECUTAR COMPRA
 
 // A) DESCONTAR STOCK
 foreach ($productos as $item) {
     $listaP = $prodCtrl->buscar(['idproducto' => $item['idproducto']]);
-    $objProd = $listaP[0];
-    $nuevoStock = $objProd->getProCantStock() - $item['cicantidad'];
-    
-    // Actualizamos el producto
-    $datosProd = [
-        'idproducto' => $objProd->getID(),
-        'pronombre' => $objProd->getProNombre(),
-        'prodetalle' => $objProd->getProDetalle(),
-        'procantstock' => $nuevoStock,
-        'precio' => $objProd->getPrecio(), // Mantener precio
-        'proimagen' => $objProd->getImagen() // Mantener imagen
-    ];
-    $prodCtrl->modificacion($datosProd);
+    if (count($listaP) > 0) {
+        $objProd = $listaP[0];
+        $cantidad = is_array($item) ? $item['cicantidad'] : $item->getCiCantidad();
+        $nuevoStock = $objProd->getProCantStock() - $cantidad;
+        
+        $datosProd = [
+            'idproducto' => $objProd->getID(),
+            'pronombre' => $objProd->getProNombre(),
+            'prodetalle' => $objProd->getProDetalle(),
+            'procantstock' => $nuevoStock,
+            'precio' => $objProd->getPrecio(),
+            'proimagen' => $objProd->getImagen()
+        ];
+        $prodCtrl->modificacion($datosProd);
+    }
 }
 
-// B) CAMBIAR ESTADO DE LA COMPRA
-// Paso 1: Cerrar el estado actual (1) poniéndole fecha de fin
-$estadoCtrl = new CompraEstadoControl();
+// B) CAMBIAR ESTADO Y ENVIAR MAIL (Delegado al Controlador)
+// Aquí llamamos a la función que arreglamos antes en CompraControl
+// Esa función se encarga de cerrar el estado 1, abrir el 2 y enviar el Email.
+$resultado = $compraCtrl->iniciarCompra($carrito);
 
-// Buscamos el estado 1 activo de esta compra
-// Usamos una búsqueda manual o recuperamos el último
-$estados = $estadoCtrl->buscar(['idcompra' => $carrito->getID()]);
-$ultimoEstado = end($estados);
-
-if ($ultimoEstado) {
-    $datosModificacion = [
-        'idcompraestado' => $ultimoEstado->getID(),
-        'idcompra' => $carrito->getID(),
-        'idcompraestadotipo' => 1,
-        'cefechaini' => $ultimoEstado->getCeFechaIni(),
-        'cefechafin' => date('Y-m-d H:i:s') // Cerramos con fecha de hoy
-    ];
-    $estadoCtrl->modificacion($datosModificacion);
+// 7. REDIRECCIÓN FINAL
+if ($resultado) {
+    // Si todo salió bien, vamos a la página de éxito
+    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/compra/exito.php?id=" . $carrito->getID());
+} else {
+    // Si falló algo en el estado
+    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=error_procesando");
 }
-
-// Paso 2: Crear el nuevo estado (2 = Aceptada/Pendiente)
-// OJO: Verifica en tu base de datos qué ID tiene el estado "Aceptada" o "Enviada".
-// Usualmente: 1=Iniciada, 2=Aceptada, 3=Enviada, 4=Cancelada
-$nuevoEstadoID = 2; 
-
-$estadoCtrl->alta([
-    'idcompra' => $carrito->getID(),
-    'idcompraestadotipo' => $nuevoEstadoID,
-    'cefechaini' => date('Y-m-d H:i:s'),
-    'cefechafin' => '0000-00-00 00:00:00' // Queda activo en estado 2
-]);
-
-// 7. ÉXITO
-// Redirigimos a la tienda con mensaje de éxito
-header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php?msg=compra_realizada");
 exit;
 ?>
-
