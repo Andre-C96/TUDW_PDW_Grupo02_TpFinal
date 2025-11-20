@@ -3,34 +3,54 @@
 require_once __DIR__ . '/../productoControl.php';
 require_once __DIR__ . '/../../Util/funciones.php';
 
+// Cargar config global (project root)
+if (file_exists(__DIR__ . '/../../../../config.php')) {
+    require_once __DIR__ . '/../../../../config.php';
+}
+
 $producto = new ProductoControl();
 $datos = carga_datos();
 
 
-$uploadDir = "Util/Imagenes/";
+// Asegurar que existe archivo en datos
+if (!empty($datos['imagen']) && is_array($datos['imagen']) && !empty($datos['imagen']['tmp_name'])) {
+    $archivo = $datos['imagen'];
 
-// Datos del archivo subido
-$archivo = $datos['imagen'];
-$nombreArchivo = basename($archivo['name']); // basename() evita path traversal
-$rutaDestino = $uploadDir . $nombreArchivo;
+    // Generar nombre único y mover al filesystem configurado
+    $nombreArchivo = imagen_generar_nombre_unico($archivo['name'], 'prod');
 
-// --- Mover archivo subido ---
-if (move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
+    $destinoFS = rtrim($GLOBALS['IMAGES_FS'] ?? (__DIR__ . '/../../../../Util/Imagenes/'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    if (!is_dir($destinoFS)) { @mkdir($destinoFS, 0755, true); }
 
-    // Guardamos la ruta RELATIVA que se usará desde la web (por ejemplo, para mostrar imagen en el front)
-    $datos['imagen'] = "Util/Imagenes/" . $nombreArchivo;
+    $rutaDestino = $destinoFS . $nombreArchivo;
 
-    // --- Insertar producto en BD ---
-    $seRegistro = $producto->alta($datos);
+    if (is_uploaded_file($archivo['tmp_name']) && move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
 
-    if ($seRegistro) {
-        $message = 'Se ingresó correctamente el producto.';
+        // Guardamos SOLO el nombre del archivo en la BD (más robusto)
+        $datos['imagen'] = $nombreArchivo;
+
+        // --- Insertar producto en BD ---
+        $seRegistro = $producto->alta($datos);
+
+        if ($seRegistro) {
+            $message = 'Se ingresó correctamente el producto.';
+        } else {
+            $message = 'Hubo un error al ingresar el producto.';
+        }
+
     } else {
-        $message = 'Hubo un error al ingresar el producto.';
+        $message = 'Error al subir la imagen.';
     }
 
 } else {
-    $message = 'Error al subir la imagen.';
+    // No se subió imagen: insertar sin imagen
+    $datos['imagen'] = null;
+    $seRegistro = $producto->alta($datos);
+    if ($seRegistro) {
+        $message = 'Se ingresó correctamente el producto (sin imagen).';
+    } else {
+        $message = 'Hubo un error al ingresar el producto.';
+    }
 }
 
 // --- Redirección con mensaje ---

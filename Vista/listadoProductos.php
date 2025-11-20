@@ -7,6 +7,7 @@ if (!isset($productos)) {
     exit;
 }
 require_once __DIR__ . '/Estructura/header.php';
+require_once __DIR__ . '/../Util/funciones.php';
 
 // Comprobar sesión para controlar acciones disponibles en la vista
 require_once __DIR__ . '/../Control/Session.php';
@@ -21,7 +22,8 @@ $logged = $session->sesionActiva();
                 <div class="col-md-4 mb-3">
                     <div class="card">
                         <?php if (method_exists($p, 'getImagen') && $p->getImagen()) : ?>
-                            <img src="<?php echo htmlspecialchars($p->getImagen()); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($p->getProNombre()); ?>">
+                            <?php $imgSrc = img_public_url($p->getImagen()); ?>
+                            <img src="<?php echo htmlspecialchars($imgSrc); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($p->getProNombre()); ?>">
                         <?php endif; ?>
                         <div class="card-body">
                             <h5 class="card-title"><?php echo htmlspecialchars($p->getProNombre()); ?></h5>

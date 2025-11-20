@@ -27,13 +27,15 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
 }
 
 require_once __DIR__ . '/../Estructura/header.php';
+require_once __DIR__ . '/../Util/funciones.php';
 ?>
 <div class="container mt-4">
     <?php if ($product): ?>
         <div class="row">
             <div class="col-md-6">
                 <?php if (!empty($product['proimagen'])): ?>
-                    <img src="/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/<?= htmlspecialchars($product['proimagen']) ?>" class="img-fluid" alt="<?= htmlspecialchars($product['pronombre']) ?>">
+                    <?php $img = img_public_url($product['proimagen']); ?>
+                    <img src="<?= htmlspecialchars($img) ?>" class="img-fluid" alt="<?= htmlspecialchars($product['pronombre']) ?>">
                 <?php endif; ?>
             </div>
             <div class="col-md-6">

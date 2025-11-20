@@ -3,23 +3,48 @@ class ControlImagenes
 {
     public function cargarImagen($nombreTabla, $imagen, $nombreCarpeta)
     {
-        $id = time().uniqid(rand());
-        $nombreArchivoImagen = $nombreTabla . $id . ".png";
-
-        $respuesta = false;
-        if(imagepng(imagecreatefromstring(file_get_contents($imagen['tmp_name'])), $GLOBALS['IMGS'] . $nombreCarpeta . $nombreArchivoImagen)){
-            $respuesta = true;
+        // Asegurarse de tener la config global cargada
+        if (file_exists(__DIR__ . '/../config.php')) {
+            require_once __DIR__ . '/../config.php';
         }
 
-        return ['respuesta'=> $respuesta, 'nombre'=>$nombreArchivoImagen];
+        $ext = pathinfo($imagen['name'], PATHINFO_EXTENSION);
+        $ext = strtolower($ext) ?: 'png';
+        $id = time() . uniqid();
+        $nombreArchivoImagen = $nombreTabla . '_' . $id . '.' . $ext;
+
+        $dirDestino = rtrim($GLOBALS['IMAGES_FS'], DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . trim($nombreCarpeta, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        if (!is_dir($dirDestino)) {
+            @mkdir($dirDestino, 0755, true);
+        }
+
+        $rutaCompleta = $dirDestino . $nombreArchivoImagen;
+        $respuesta = false;
+
+        if (is_uploaded_file($imagen['tmp_name'])) {
+            if (move_uploaded_file($imagen['tmp_name'], $rutaCompleta)) {
+                $respuesta = true;
+            }
+        } else {
+            // Intentar crear desde string (captura previa)
+            if (imagepng(imagecreatefromstring(file_get_contents($imagen['tmp_name'])), $rutaCompleta)) {
+                $respuesta = true;
+            }
+        }
+
+        return ['respuesta' => $respuesta, 'nombre' => $nombreArchivoImagen, 'ruta' => $rutaCompleta];
     }
 
     public function eliminarImagen($nombreArchivoImagen, $nombreCarpeta)
     {
-        $dir = $GLOBALS['IMGS'] . $nombreCarpeta . $nombreArchivoImagen;
+        if (file_exists(__DIR__ . '/../config.php')) {
+            require_once __DIR__ . '/../config.php';
+        }
 
-        if (!is_null($dir)) {
-            unlink($dir);
+        $dir = rtrim($GLOBALS['IMAGES_FS'], DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . trim($nombreCarpeta, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $nombreArchivoImagen;
+
+        if (file_exists($dir)) {
+            @unlink($dir);
         }
     }
 }
