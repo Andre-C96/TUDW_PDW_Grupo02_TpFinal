@@ -3,7 +3,7 @@
 // Esta vista espera que la acción prepare la variable $productos.
 // Si se accede directamente a la vista sin pasar por la acción, redirigimos al action.
 if (!isset($productos)) {
-    header('Location: /Vista/Estructura/Accion/Producto/listado.php');
+    header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php');
     exit;
 }
 require_once __DIR__ . '/Estructura/header.php';
@@ -39,6 +39,13 @@ $isAdmin = (!empty($rolActivo) && isset($rolActivo['rol']) && strtolower($rolAct
                             <?php else: ?>
                                 <!-- Administrador: no mostrar botón de carrito -->
                             <?php endif; ?>
+                                <?php if ($isAdmin) : ?>
+                                    <form method="post" action="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/deshabilitarProducto.php" style="display:inline-block;margin-left:8px;">
+                                        <input type="hidden" name="idproducto" value="<?php echo htmlspecialchars($p->getID()); ?>">
+                                        <input type="hidden" name="accion" value="deshabilitar">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Deshabilitar este producto?');">Deshabilitar</button>
+                                    </form>
+                                <?php endif; ?>
                         </div>
                     </div>
                 </div>
