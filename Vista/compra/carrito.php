@@ -49,8 +49,9 @@ require_once __DIR__ . '/../Estructura/header.php';
                                 $totalGeneral += $subtotal;
 
                                 // USAMOS 'proimagen' COMO ME INDICASTE
-                                $imgNombre = $p['proimagen'] ?? 'sin_imagen.png';
-                                // Ruta de la imagen (Asegúrate que estén en esta carpeta)
+                                // si no hay imagen, usar la imagen por defecto `default.png`
+                                $imgNombre = $p['proimagen'] ?? 'default.png';
+                                // Ruta de la imagen (Util/Imagenes)
                                 $rutaImagen = "/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/" . $imgNombre;
                             ?>
                                 <tr>
@@ -60,7 +61,7 @@ require_once __DIR__ . '/../Estructura/header.php';
                                                  alt="Img" 
                                                  class="rounded border bg-white"
                                                  style="width: 60px; height: 60px; object-fit: contain; margin-right: 15px;"
-                                                 onerror="this.src='/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/sin_imagen.png'">
+                                                 onerror="this.src='/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/default.png'">
                                             
                                             <div>
                                                 <h6 class="mb-0 fw-bold text-dark"><?= htmlspecialchars($p['pronombre']) ?></h6>
