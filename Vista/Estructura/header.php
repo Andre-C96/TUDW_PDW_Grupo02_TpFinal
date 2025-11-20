@@ -221,12 +221,17 @@ $isAdmin = (!empty($rolActivo) && isset($rolActivo['rol']) && strtolower($rolAct
 
                 echo '</a></li>';
 
-                // login icon
-
-                   echo '<li class="nav-item"><a class="nav-link nav-user-icon" href="/TUDW_PDW_Grupo02_TpFinal/Vista/login.php" aria-label="Iniciar sesión">'
+                // login/logout icon - mostrar según estado de sesión
+                if ($session->sesionActiva()) {
+                    $logoutUrl = '/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Login/logout.php';
+                    echo '<li class="nav-item"><a class="nav-link nav-user-icon" href="'.htmlspecialchars($logoutUrl).'" aria-label="Cerrar sesión">'
+                        . '<img src="/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/IconLogout.png" alt="Cerrar sesión" style="width: 24px; height: 24px;">'
+                        . '</a></li>';
+                } else {
+                    echo '<li class="nav-item"><a class="nav-link nav-user-icon" href="/TUDW_PDW_Grupo02_TpFinal/Vista/login.php" aria-label="Iniciar sesión">'
                         . '<img src="/TUDW_PDW_Grupo02_TpFinal/Util/Imagenes/IconLogin.png" alt="Usuario" style="width: 24px; height: 24px;">'
-						. '';
-						echo '</a></li>';
+                        . '</a></li>';
+                }
                 echo '</ul>';
 
             }
