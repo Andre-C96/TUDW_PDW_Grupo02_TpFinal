@@ -108,6 +108,11 @@ $isAdmin = (!empty($rolActivo) && isset($rolActivo['rol']) && strtolower($rolAct
                 echo '<li class="nav-item"><a class="nav-link" href="/TUDW_PDW_Grupo02_TpFinal/Vista/index.php">Inicio</a></li>';
                 echo '<li class="nav-item"><a class="nav-link" href="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php">Productos</a></li>';
 
+                // Mostrar "Mis compras" solo para usuarios logueados que no sean administradores
+                if ($session->sesionActiva() && empty($isAdmin)) {
+                    echo '<li class="nav-item"><a class="nav-link" href="/TUDW_PDW_Grupo02_TpFinal/Vista/listadoCompras.php">Mis compras</a></li>';
+                }
+
                 if (!empty($menuData['left'])) {
                     foreach ($menuData['left'] as $item) {
                         $url = isset($item['url']) ? $item['url'] : '#';
@@ -188,6 +193,12 @@ $isAdmin = (!empty($rolActivo) && isset($rolActivo['rol']) && strtolower($rolAct
                 // Link público a Productos
 
                 echo '<li class="nav-item"><a class="nav-link" href="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Producto/listado.php">Productos</a></li>';
+
+                // Mostrar "Mis compras" solo para usuarios logueados que no sean administradores
+                if ($session->sesionActiva() && empty($isAdmin)) {
+                    echo '<li class="nav-item"><a class="nav-link" href="/TUDW_PDW_Grupo02_TpFinal/Vista/listadoCompras.php">Mis compras</a></li>';
+                }
+
                 // Mostrar Panel incluso en el fallback cuando el usuario es administrador
                 if (!empty($isAdmin)) {
                     echo '<li class="nav-item"><a class="nav-link" href="/TUDW_PDW_Grupo02_TpFinal/Vista/admin/panelAdmin.php">Panel</a></li>';
