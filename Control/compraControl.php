@@ -7,7 +7,11 @@ require_once __DIR__ . '/compraItemControl.php';
 require_once __DIR__ . '/Session.php';
 require_once __DIR__ . '/usuarioControl.php';
 // Asegúrate de tener acceso a BaseDatos para el listado SQL
-require_once __DIR__ . '/../Modelo/Conector/BaseDatos.php'; 
+require_once __DIR__ . '/../Modelo/Conector/BaseDatos.php';
+// Cargar Carbon para manejo de fechas
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Carbon\Carbon; 
 
 class CompraControl
 {
@@ -494,5 +498,38 @@ class CompraControl
             }
         }
         return $arreglo_salida;
+    }
+
+    /**
+     * Verifica si una compra puede ser cancelada (menos de 24 horas desde su creación)
+     * @param string $fechaCompra Fecha de la compra en formato string
+     * @return bool True si puede cancelarse, False en caso contrario
+     */
+    public function puedeCancelarCompra($fechaCompra) {
+        $fecha = Carbon::parse($fechaCompra);
+        $ahora = Carbon::now();
+        $horasDiferencia = $fecha->diffInHours($ahora);
+        return $horasDiferencia < 24;
+    }
+
+    /**
+     * Calcula la fecha estimada de entrega
+     * @param string $fechaCompra Fecha de la compra
+     * @param int $diasEstimados Días estimados de entrega (por defecto 7)
+     * @return string Fecha de entrega formateada
+     */
+    public function fechaEntregaEstimada($fechaCompra, $diasEstimados = 7) {
+        return Carbon::parse($fechaCompra)->addDays($diasEstimados)->format('d/m/Y');
+    }
+
+    /**
+     * Verifica si una compra es del último mes
+     * @param string $fechaCompra Fecha de la compra
+     * @return bool True si es del último mes, False en caso contrario
+     */
+    public function esDelUltimoMes($fechaCompra) {
+        $fecha = Carbon::parse($fechaCompra);
+        $unMesAtras = Carbon::now()->subMonth();
+        return $fecha->isAfter($unMesAtras);
     }
 }
