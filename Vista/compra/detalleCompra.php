@@ -51,7 +51,7 @@ $badgeColor = $coloresEstado[$idEstadoTipo] ?? 'bg-info';
                     <small class="text-muted text-uppercase">Estado Actual</small><br>
                     
                     <?php if ($esAdmin): ?>
-                        <form action="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Venta/listado.php" method="post" class="d-flex align-items-center mt-1">
+                        <form action="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/cambiarEstado.php" method="post" class="d-flex align-items-center mt-1">
                             <input type="hidden" name="idcompra" value="<?php echo $objCompra->getID(); ?>">
                             
                             <select name="nuevoEstado" class="form-select form-select-sm border-danger me-2" style="max-width: 200px;">

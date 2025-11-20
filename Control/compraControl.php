@@ -662,9 +662,9 @@ class CompraControl
      * @param int $nuevoEstadoTipo El ID del nuevo estado
      * @return boolean
      */
-    public function actualizarEstadoCompra($idCompra, $nuevoEstadoTipo)
+   public function actualizarEstadoCompra($idCompra, $nuevoEstadoTipo)
     {
-        // Configuración básica
+        //  Configuración
         date_default_timezone_set('America/Argentina/Buenos_Aires');
         $fechaHoraActual = date('Y-m-d H:i:s');
         $fechaCeros = '0000-00-00 00:00:00';
@@ -672,40 +672,60 @@ class CompraControl
         $objCompraEstadoControl = new CompraEstadoControl();
         $exito = false;
 
-        // BUSCAR EL ESTADO ACTUAL ACTIVO
-        // Buscamos estados con fecha fin nula o ceros
+        //  BUSCAR EL ESTADO ACTIVO
+        // Intentamos buscar específicamente el que tiene ceros
         $estadosActivos = $objCompraEstadoControl->buscar([
             'idcompra' => $idCompra,
             'cefechafin' => $fechaCeros 
         ]);
 
-        // Si no encuentra por ceros, busca por null
+        // Si falló, traemos TODOS y filtramos a mano
         if (empty($estadosActivos)) {
-             $todos = $objCompraEstadoControl->buscar(['idcompra' => $idCompra]);
-             foreach ($todos as $e) {
-                 if ($e->getCeFechaFin() == null) {
+             $todosLosEstados = $objCompraEstadoControl->buscar(['idcompra' => $idCompra]);
+             foreach ($todosLosEstados as $e) {
+                 // Verificamos si es nulo O si es string de ceros
+                 $fin = $e->getCeFechaFin();
+                 if ($fin == null || $fin == $fechaCeros) {
                      $estadosActivos[] = $e;
                  }
              }
         }
 
-        // LLAMAR A FUNCIÓN CAMBIARESTADO 
-        foreach ($estadosActivos as $estadoViejo) {
-            
-            // Preparamos los datos que 'cambiarEstado' necesita en su primer parámetro $data
-            $dataParaFuncion = [
-                'idcompraestado' => $estadoViejo->getID(),      
-                'idcompra' => $idCompra,                        
-                'idcompraestadotipo' => $nuevoEstadoTipo        
+        // REALIZAR EL CAMBIO
+        if (!empty($estadosActivos)) {
+            // CERRAR LOS VIEJOS
+            foreach ($estadosActivos as $estadoViejo) {
+                $paramCierre = [
+                    'idcompraestado' => $estadoViejo->getID(),
+                    'idcompra' => $idCompra,
+                    'idcompraestadotipo' => $estadoViejo->getObjCompraEstadoTipo()->getID(),
+                    'cefechaini' => $estadoViejo->getCeFechaIni(),
+                    'cefechafin' => $fechaHoraActual // <--- Cerramos con fecha de hoy
+                ];
+                $objCompraEstadoControl->modificacion($paramCierre);
+            }
+
+            // ABRIR EL NUEVO
+            $paramNuevo = [
+                'idcompra' => $idCompra,
+                'idcompraestadotipo' => $nuevoEstadoTipo,
+                'cefechaini' => $fechaHoraActual,
+                'cefechafin' => $fechaCeros // 
             ];
 
-            // Datos del estado viejo para pasar como argumentos sueltos
-            $idTipoViejo = $estadoViejo->getObjCompraEstadoTipo()->getID();
-            $fechaInicioVieja = $estadoViejo->getCeFechaIni();
-
-            // Llamada a la función
-            
-            if ($this->cambiarEstado($dataParaFuncion, $idTipoViejo, $fechaInicioVieja, $fechaHoraActual, $objCompraEstadoControl)) {
+            if ($objCompraEstadoControl->alta($paramNuevo)) {
+                $exito = true;
+            }
+        } else {
+        
+            // Forzamos la creación del nuevo estado 
+            $paramNuevo = [
+                'idcompra' => $idCompra,
+                'idcompraestadotipo' => $nuevoEstadoTipo,
+                'cefechaini' => $fechaHoraActual,
+                'cefechafin' => $fechaCeros
+            ];
+            if ($objCompraEstadoControl->alta($paramNuevo)) {
                 $exito = true;
             }
         }
