@@ -36,7 +36,7 @@ $esAdmin = false;
 
 // Verificamos si el rol es 'Administrador' 
 if (!empty($rolActivo)) {
-    // Ajusta 'Administrador' si en tu base de datos se llama distinto (ej: 'Admin')
+    // Ajusta 'Administrador' si en tu base de datos se llama distinto 
     if ($rolActivo['rol'] == 'Administrador' || $rolActivo['id'] == 1) {
         $esAdmin = true;
     }

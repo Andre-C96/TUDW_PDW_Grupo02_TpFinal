@@ -29,7 +29,7 @@ $badgeColor = $coloresEstado[$idEstadoTipo] ?? 'bg-info';
             $rutaVolver = "/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Venta/listado.php"; 
         } else {
             $textoVolver = "Volver a Mis Compras";
-            $rutaVolver = "/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/misCompras.php";
+            $rutaVolver = "/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/listado.php";
         }
         ?>
 
