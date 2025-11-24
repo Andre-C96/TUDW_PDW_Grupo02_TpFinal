@@ -21,24 +21,39 @@ class Session
         }
     }
 
-    public function iniciar($nombreUsuario, $pswUsuario)
+    /**
+     * @param string $nombreUsuario
+     * @param string $pswUsuario 
+     * @return boolean True si el login es exitoso, false si falla la autenticación
+     */
+    public function LoginUsuario($nombreUsuario, $pswUsuario)
     {
-        $resp = false;
-        if ($this->activa() && $this->validar($nombreUsuario, $pswUsuario)) {
-            $_SESSION['usnombre'] = $nombreUsuario;
-            $user = $this->getUsuario();
-            $_SESSION['idusuario'] = $user->getID();
-            $_SESSION['usmail'] = $user->getUsMail();
-            $_SESSION['usdeshabilitado'] = $user->getUsDeshabilitado();
-
-            $resp = true;
+        // 1. Validar y obtener el objeto Usuario (Lógica de validar())
+        $objUsuarioC = new UsuarioControl();
+        $param = array("usnombre" => $nombreUsuario);
+        $listaUsuario = $objUsuarioC->buscar($param);
+        
+        if (empty($listaUsuario)) {
+            return false; // No existe usuario
         }
 
-        if ($resp) {
-            $this->setearRolActivo();
+        $user = $listaUsuario[0];
+        $hash = $user->getUsPass();
+        
+        if (!password_verify($pswUsuario, $hash)) {
+            return false; // Contraseña incorrecta
         }
 
-        return $resp;
+        // 2. Setear la Sesión (Lógica de iniciar())
+       
+        $_SESSION['usnombre'] = $nombreUsuario;
+        $_SESSION['idusuario'] = $user->getID();
+        $_SESSION['usmail'] = $user->getUsMail();
+        $_SESSION['usdeshabilitado'] = $user->getUsDeshabilitado();
+
+        $this->setearRolActivo(); // Setear el rol
+        
+        return true; // Éxito
     }
 
     public function setearRolActivo()
@@ -93,26 +108,6 @@ class Session
         $resp = false;
         if ($this->getNombreUsuarioLogueado() <> null) {
             $resp = true;
-        }
-        return $resp;
-    }
-
-    public function validar($usNombre, $usPsw)
-    {
-        //Viene por parametro el nombre de usuario y la contraseña encriptada
-        $resp = false;
-        if ($this->activa()) {
-            $objUsuarioC = new UsuarioControl();
-            // Buscamos por nombre de usuario y luego verificamos la contraseña
-            $param = array("usnombre" => $usNombre);
-            $listaUsuario = $objUsuarioC->buscar($param);
-            if (!empty($listaUsuario)) {
-                $usuario = $listaUsuario[0];
-                $hash = $usuario->getUsPass();
-                if (password_verify($usPsw, $hash)) {
-                    $resp = true;
-                }
-            }
         }
         return $resp;
     }
