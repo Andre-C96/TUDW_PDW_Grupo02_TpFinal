@@ -1,0 +1,32 @@
+/* Custom styles for the application */
+:root {
+    --pine-green: #01796F;
+    --header-red: #dc3545;
+}
+
+/* PDF download button: outline default, but hover/active should be red-filled */
+.btn-pdf {
+    color: var(--header-red);
+    border-color: var(--header-red);
+}
+.btn-pdf:hover,
+.btn-pdf:focus,
+.btn-pdf:active,
+.btn-pdf.active,
+.btn-pdf:active:focus {
+    color: #fff !important;
+    background-color: var(--header-red) !important;
+    border-color: var(--header-red) !important;
+    box-shadow: none !important;
+}
+
+/* Ensure SVG/icon inside the button inherits the color */
+.btn-pdf svg,
+.btn-pdf .bi {
+    vertical-align: middle;
+}
+
+/* small responsive tweaks */
+@media (max-width: 576px) {
+    .btn-pdf { font-size: 0.9rem; }
+}

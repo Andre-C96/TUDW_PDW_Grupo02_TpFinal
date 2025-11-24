@@ -33,9 +33,17 @@ $badgeColor = $coloresEstado[$idEstadoTipo] ?? 'bg-info';
         }
         ?>
 
-        <a href="<?php echo $rutaVolver; ?>" class="btn btn-outline-secondary">
-            &larr; <?php echo $textoVolver; ?>
-        </a>
+        <div class="d-flex gap-2">
+            <a href="<?php echo $rutaVolver; ?>" class="btn btn-outline-secondary">
+                &larr; <?php echo $textoVolver; ?>
+            </a>
+            <?php if ($idEstadoTipo != 1): ?>
+                     <a href="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/descargarPDF.php?id=<?php echo $objCompra->getID(); ?>" 
+                         class="btn btn-outline-primary btn-pdf" target="_blank">
+                    <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
+                </a>
+            <?php endif; ?>
+        </div>
     </div>
 
    <div class="card shadow-sm mb-4 border-top-0 border-start-0 border-end-0 border-bottom-0" style="border-left: 5px solid var(--pine-green) !important;">
