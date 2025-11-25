@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Modelo/producto.php';
 require_once __DIR__ . '/../Modelo/Conector/BaseDatos.php';
+require_once __DIR__ . '/ImagenesControl.php';
 
 class ProductoControl
 {
@@ -126,28 +127,6 @@ class ProductoControl
         return $resp;
     }
 
-    /**
-     *
-     * @param array $param
-     */
-    // public function altaSinID($param)
-    // {
-    //     $resp = false;
-
-    //     $cImagenes = new ControlImagenes();
-    //     $arreglo = $cImagenes->cargarImagen('producto', $param['files']['imagen'], 'productos/');
-
-    //     if ($arreglo['respuesta']) {
-    //         $param['imagen'] = $arreglo['nombre'];
-    //         $param['prodeshabilitado'] = null;
-    //         $objProducto = $this->cargarObjetoSinID($param);
-    //         if ($objProducto != null and $objProducto->insertar()) {
-    //             $resp = true;
-    //         }
-    //     }
-
-    //     return $resp;
-    // }
 
     /**
      * permite eliminar un objeto
@@ -349,4 +328,38 @@ class ProductoControl
         return $producto->actualizarStockBD($nuevoStock);
     }
 
+    /**
+     * Gestiona la subida de imagen y el alta del producto USANDO ControlImagenes.
+     * @param array $datos (Debe contener $_POST y $_FILES['proimagen'])
+     * @return array ['exito' => bool, 'mensaje' => string]
+     */
+    public function crearProductoConImagen($datos)
+    {
+        $nombreImagen = null; 
+
+        // GESTIÓN DE IMAGEN 
+        if (!empty($datos['proimagen']) && isset($datos['proimagen']['tmp_name']) && $datos['proimagen']['error'] === UPLOAD_ERR_OK) {
+            
+            $controlImg = new ControlImagenes();
+            
+            $respImg = $controlImg->cargarImagen('prod', $datos['proimagen'], '');
+            
+            if ($respImg['respuesta']) {
+                $nombreImagen = $respImg['nombre'];
+            } else {
+                return ['exito' => false, 'mensaje' => 'Error al subir la imagen con ControlImagenes.'];
+            }
+        }
+
+        // PREPARAR DATOS
+        $datos['proimagen'] = $nombreImagen;
+        $datos['prodeshabilitado'] = null; 
+
+        // GUARDAR EN BD
+        if ($this->alta($datos)) {
+            return ['exito' => true, 'mensaje' => 'Producto creado con éxito.'];
+        } else {
+            return ['exito' => false, 'mensaje' => 'Error al guardar en la base de datos.'];
+        }
+    }
 }

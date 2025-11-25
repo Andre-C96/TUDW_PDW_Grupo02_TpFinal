@@ -8,6 +8,7 @@ if (!isset($productos)) {
 }
 require_once __DIR__ . '/Estructura/header.php';
 require_once __DIR__ . '/../Util/funciones.php';
+require_once __DIR__ . '/../config.php';
 
 // Comprobar sesión para controlar acciones disponibles en la vista
 require_once __DIR__ . '/../Control/Session.php';
