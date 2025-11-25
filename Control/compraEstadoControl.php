@@ -83,11 +83,16 @@ class CompraEstadoControl
                 }
             }
 
-            // Fecha Fin
+           // Fecha Fin
             if (array_key_exists('cefechafin', $param)) {
+                // Si viene el dato lo usamos.
                 $obj->setCeFechaFin($param['cefechafin']);
             } else {
-                $obj->setCeFechaFin(null);
+                // Si NO viene el parámetro ponemos null por defecto.
+                // Si es MODIFICACIÓN (tiene ID), NO HACEMOS NADA (mantenemos el valor original de la BD).
+                if ($obj->getID() == null) {
+                    $obj->setCeFechaFin(null);
+                }
             }
         }
         return $obj;

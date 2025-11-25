@@ -96,28 +96,29 @@ class CompraEstado extends BaseDatos{
     
     public function modificar(){
         $resp = false;
-        $sql="UPDATE compraestado 
-        SET idcompra='".$this->getObjCompra()->getID()
-        ."', idcompraestadotipo='".$this->getObjCompraEstadoTipo()->getID()
-        ."', cefechaini='".$this->getCeFechaIni()
-        ."', cefechafin='".$this->getCeFechaFin()
-        ."' WHERE idcompraestado='".$this->getID()."'";
+        $base = new BaseDatos();
         
-        error_log("SQL Modificar: " . $sql);
+        // Manejo inteligente de NULL para la fecha fin
+        $fechaFin = $this->getCeFechaFin();
+        $fechaFinSQL = ($fechaFin == null || $fechaFin == 'null') ? "NULL" : "'$fechaFin'";
+
+        $sql="UPDATE compraestado SET 
+            idcompra = " . $this->getObjCompra()->getID() . ",
+            idcompraestadotipo = " . $this->getObjCompraEstadoTipo()->getID() . ",
+            cefechaini = '" . $this->getCeFechaIni() . "',
+            cefechafin = $fechaFinSQL 
+            WHERE idcompraestado = " . $this->getID();
+            
+        // error_log("SQL Modificar: " . $sql); // Descomentar para debug
         
-        if ($this->Iniciar()) {
-            if ($this->Ejecutar($sql)) {
+        if ($base->Iniciar()) {
+            if ($base->Ejecutar($sql)) {
                 $resp = true;
-                error_log("Modificación ejecutada correctamente");
             } else {
-                $errorMsg = "compraestado->modificar: ".$this->getError();
-                $this->setMensajeOperacion($errorMsg);
-                error_log("ERROR en modificar: " . $errorMsg);
+                $this->setMensajeOperacion("CompraEstado->modificar: ".$base->getError());
             }
         } else {
-            $errorMsg = "compraestado->modificar: ".$this->getError();
-            $this->setMensajeOperacion($errorMsg);
-            error_log("ERROR al iniciar conexión: " . $errorMsg);
+            $this->setMensajeOperacion("CompraEstado->modificar: ".$base->getError());
         }
         return $resp;
     }

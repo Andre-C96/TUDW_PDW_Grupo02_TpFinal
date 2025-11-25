@@ -443,38 +443,6 @@ class CompraControl
         return $respuesta;
     }
 
-    public function cambiarEstado($data, $idCET, $fechaIni, $fechaFin, $objCE)
-    {
-        // Primero: cerrar el estado actual
-        $arregloModCompra = [
-            'idcompraestado' => $data['idcompraestado'],
-            'idcompra' => $data['idcompra'],
-            'idcompraestadotipo' => $idCET,
-            'cefechaini' => $fechaIni,
-            'cefechafin' => $fechaFin,
-        ];
-
-        error_log("Modificando estado actual: " . json_encode($arregloModCompra));
-        $resp = $objCE->modificacion($arregloModCompra);
-        error_log("Resultado modificación: " . ($resp ? "OK" : "FALLO"));
-
-        $res = false;
-
-        if ($resp) {
-            // Segundo: crear nuevo estado
-            $arregloNewCompra = [
-                'idcompra' => $data['idcompra'],
-                'idcompraestadotipo' => $data['idcompraestadotipo'],
-                'cefechaini' => $fechaFin,
-                'cefechafin' => null,
-            ];
-
-            error_log("Creando nuevo estado: " . json_encode($arregloNewCompra));
-            $res = $objCE->altaSinID($arregloNewCompra);
-            error_log("Resultado alta: " . ($res ? "OK" : "FALLO"));
-        }
-        return $res;
-    }
 
     public function ejecutarCompraCarrito()
     {
@@ -708,15 +676,9 @@ class CompraControl
         return $fecha->isAfter($unMesAtras);
     }
 
-     /**
-     * Busca los datos necesarios y llama a cambiarEstado.
-     * @param int $idCompra El ID de la compra a modificar
-     * @param int $nuevoEstadoTipo El ID del nuevo estado
-     * @return boolean
-     */
    public function actualizarEstadoCompra($idCompra, $nuevoEstadoTipo)
     {
-        //  Configuración
+        // 1. Configuración
         date_default_timezone_set('America/Argentina/Buenos_Aires');
         $fechaHoraActual = date('Y-m-d H:i:s');
         $fechaCeros = '0000-00-00 00:00:00';
@@ -724,61 +686,78 @@ class CompraControl
         $objCompraEstadoControl = new CompraEstadoControl();
         $exito = false;
 
-        //  BUSCAR EL ESTADO ACTIVO
-        // Intentamos buscar específicamente el que tiene ceros
-        $estadosActivos = $objCompraEstadoControl->buscar([
-            'idcompra' => $idCompra,
-            'cefechafin' => $fechaCeros 
-        ]);
+        // BUSCAR EL ESTADO ACTUAL ACTIVO
+        // Traemos TODOS los estados de esa compra
+        $todosLosEstados = $objCompraEstadoControl->buscar(['idcompra' => $idCompra]);
+        
+        $estadosACerrar = [];
 
-        // Si falló, traemos TODOS y filtramos a mano
-        if (empty($estadosActivos)) {
-             $todosLosEstados = $objCompraEstadoControl->buscar(['idcompra' => $idCompra]);
-             foreach ($todosLosEstados as $e) {
-                 // Verificamos si es nulo O si es string de ceros
-                 $fin = $e->getCeFechaFin();
-                 if ($fin == null || $fin == $fechaCeros) {
-                     $estadosActivos[] = $e;
-                 }
-             }
+        // Filtramos manualmente en PHP (Más seguro que confiar en el SQL del buscar)
+        foreach ($todosLosEstados as $e) {
+            $fin = $e->getCeFechaFin();
+            // Si la fecha es nula, vacía o ceros, hay que cerrarlo
+            if ($fin == null || $fin == '' || $fin == $fechaCeros) {
+                $estadosACerrar[] = $e;
+            }
         }
 
-        // REALIZAR EL CAMBIO
-        if (!empty($estadosActivos)) {
-            // CERRAR LOS VIEJOS
-            foreach ($estadosActivos as $estadoViejo) {
-                $paramCierre = [
-                    'idcompraestado' => $estadoViejo->getID(),
-                    'idcompra' => $idCompra,
-                    'idcompraestadotipo' => $estadoViejo->getObjCompraEstadoTipo()->getID(),
-                    'cefechaini' => $estadoViejo->getCeFechaIni(),
-                    'cefechafin' => $fechaHoraActual // <--- Cerramos con fecha de hoy
-                ];
-                $objCompraEstadoControl->modificacion($paramCierre);
-            }
-
-            // ABRIR EL NUEVO
-            $paramNuevo = [
-                'idcompra' => $idCompra,
-                'idcompraestadotipo' => $nuevoEstadoTipo,
-                'cefechaini' => $fechaHoraActual,
-                'cefechafin' => $fechaCeros // 
-            ];
-
-            if ($objCompraEstadoControl->alta($paramNuevo)) {
-                $exito = true;
-            }
-        } else {
+        // CERRAR LOS VIEJOS
         
-            // Forzamos la creación del nuevo estado 
-            $paramNuevo = [
-                'idcompra' => $idCompra,
-                'idcompraestadotipo' => $nuevoEstadoTipo,
-                'cefechaini' => $fechaHoraActual,
-                'cefechafin' => $fechaCeros
-            ];
-            if ($objCompraEstadoControl->alta($paramNuevo)) {
-                $exito = true;
+        if (!empty($estadosACerrar)) {
+            foreach ($estadosACerrar as $estadoViejo) {
+                
+                // Instanciamos un objeto limpio
+                $objCierre = new CompraEstado();
+                
+                // Seteamos el ID y cargamos los datos actuales de la BD
+                $objCierre->setID($estadoViejo->getID());
+                $objCierre->cargar(); 
+                
+                // Cambiamos SOLO la fecha de fin
+                $objCierre->setCeFechaFin($fechaHoraActual);
+                
+                // Guardamos los cambios
+                if (!$objCierre->modificar()) {
+                    error_log("Error al cerrar estado ID: " . $estadoViejo->getID());
+                }
+            }
+        }
+
+        // ABRIR EL NUEVO ESTADO
+        $paramNuevo = [
+            'idcompra' => $idCompra,
+            'idcompraestadotipo' => $nuevoEstadoTipo,
+            'cefechaini' => $fechaHoraActual,
+            'cefechafin' => $fechaCeros 
+        ];
+
+        if ($objCompraEstadoControl->alta($paramNuevo)) {
+            $exito = true;
+
+            // EMAIL
+            try {
+                $objCompra = new Compra();
+                $objCompra->setID($idCompra);
+                if ($objCompra->cargar()) {
+                    $rawUser = $objCompra->getObjUsuario();
+                    $idUsuarioCompra = is_object($rawUser) ? $rawUser->getID() : $rawUser;
+
+                    if (!empty($idUsuarioCompra)) {
+                        $objUsuarioFinal = new Usuario();
+                        $objUsuarioFinal->setID($idUsuarioCompra);
+                        if ($objUsuarioFinal->cargar()) {
+                            $email = $objUsuarioFinal->getUsMail();
+                            $nombre = $objUsuarioFinal->getUsNombre();
+                            
+                            if ($email && class_exists('EmailService')) {
+                                $datos = ['nombre' => $nombre, 'fecha' => date('d/m/Y H:i')];
+                                EmailService::enviarEstadoCompra($email, $idCompra, $nuevoEstadoTipo, $datos);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                // Ignorar error mail
             }
         }
 
