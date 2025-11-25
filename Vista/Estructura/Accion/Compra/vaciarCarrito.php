@@ -1,51 +1,44 @@
 <?php
 // Vista/Estructura/Accion/Compra/vaciarCarrito.php
+// ACCIÓN MINIMALISTA
 
-// 1. CONFIGURACIÓN DE RUTAS (CORREGIDO: 4 niveles atrás)
+// 1. RUTAS
 $root = __DIR__ . '/../../../../';
-
 require_once $root . 'Control/Session.php';
 require_once $root . 'Control/compraControl.php';
-require_once $root . 'Control/usuarioControl.php'; 
+require_once $root . 'Control/usuarioControl.php'; // Necesario para dependencias internas
 
 $session = new Session();
 
-// 2. VALIDAR SESIÓN
+// 2. VALIDACIÓN SESIÓN
 if (!$session->activa()) {
     header('Location: /TUDW_PDW_Grupo02_TpFinal/Vista/login.php');
     exit;
 }
 
-// 3. OBTENER USUARIO
+// 3. OBTENER DATOS
+// Simplificamos la obtención del ID
 if (method_exists($session, 'getIDUsuarioLogueado')) {
     $idUsuario = $session->getIDUsuarioLogueado();
 } else {
     $idUsuario = $_SESSION['idusuario'] ?? null;
 }
 
-// 4. BUSCAR EL CARRITO ACTIVO
-// Usamos el método robusto que ya arreglamos en UsuarioControl
-$uControl = new UsuarioControl();
-$carritoObj = $uControl->obtenerCarrito($idUsuario);
+// 4. INVOCAR CONTROLADOR
+$compraCtrl = new CompraControl();
+$resultado = false;
 
-if ($carritoObj != null) {
-    // 5. PROCEDER A VACIAR
-    $cControl = new CompraControl();
-    $idCompra = $carritoObj->getID();
+if ($idUsuario) {
+    // Delegamos toda la tarea al controlador
+    $resultado = $compraCtrl->vaciarCarritoDeUsuario($idUsuario);
+}
 
-    // Llamamos a la función vaciarCarrito del controlador
-    // Esta función busca todos los items de esa compra y les hace 'baja' uno por uno
-    if ($cControl->vaciarCarrito($idCompra)) {
-        // Éxito
-        header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php?msg=carrito_vaciado");
-    } else {
-        // Puede dar false si el carrito ya estaba vacío o si falló la BD
-        // Lo mandamos al carrito igual, porque técnicamente ya está vacío
-        header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php");
-    }
-
+// 5. REDIRECCIÓN
+if ($resultado) {
+    // Éxito: Se vaciaron los items
+    header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php?msg=carrito_vaciado");
 } else {
-    // No había carrito para vaciar
+    // Fallo: Estaba vacío o no se encontró (igual mostramos el carrito)
     header("Location: /TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Compra/mostrarCarrito.php");
 }
 exit;

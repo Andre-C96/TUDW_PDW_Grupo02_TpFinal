@@ -985,4 +985,82 @@ class CompraControl
         return $productos;
     }
 
+    /**
+     * Busca el carrito activo del usuario y lo vacía.
+     * Encapsula la lógica de UsuarioControl + CompraControl.
+     * @param int $idUsuario
+     * @return boolean
+     */
+    public function vaciarCarritoDeUsuario($idUsuario)
+    {
+        $uControl = new UsuarioControl();
+        $carrito = $uControl->obtenerCarrito($idUsuario);
+        
+        if ($carrito != null) {
+            // Reutilizamos tu función interna vaciarCarrito($idCompra)
+            return $this->vaciarCarrito($carrito->getID());
+        }
+        
+        return false; // No había carrito para vaciar
+    }
+    
+    /**
+     * Retorna el listado completo de ventas con su estado actual y datos de usuario.
+     * @return array Lista formateada lista para la vista
+     */
+    public function obtenerListadoDeVentas()
+    {
+        $arregloSalida = [];
+        $objCompra = new Compra();
+        // Buscamos TODAS las compras del sistema
+        $comprasObj = $objCompra->listar(null);
+        
+        $compraEstadoCtrl = new CompraEstadoControl();
+
+        if (is_array($comprasObj)) {
+            foreach ($comprasObj as $compra) {
+                $id = $compra->getID();
+                $cofecha = $compra->getCoFecha();
+                
+                // Buscar historial de estados
+                $listaCE = $compraEstadoCtrl->buscar(['idcompra' => $id]);
+                
+                $estado = 'Desconocido';
+                $idcompraestado = null;
+                $usnombre = 'Usuario Eliminado';
+                $fechaEstado = $cofecha;
+
+                if (!empty($listaCE)) {
+                    // Tomamos el último estado
+                    $ultimoEstado = end($listaCE);
+                    
+                    $estado = $ultimoEstado->getObjCompraEstadoTipo()->getCetDescripcion();
+                    $idcompraestado = $ultimoEstado->getID();
+                    $fechaEstado = $ultimoEstado->getCeFechaIni();
+                    
+                    // Intentamos obtener nombre de usuario de forma segura
+                    $objUsuario = $compra->getObjUsuario();
+                    if ($objUsuario) {
+                        $usnombre = $objUsuario->getUsNombre();
+                    }
+                } else {
+                    // Si no tiene estados (zombi), lo marcamos como error o inicial
+                    $estado = 'Sin Estado';
+                }
+
+                // Armamos la fila limpia
+                $arregloSalida[] = [
+                    'idcompra' => $id,
+                    'cofecha' => $fechaEstado, // Mostramos la fecha del último cambio
+                    'finfecha' => null,
+                    'usnombre' => $usnombre,
+                    'estado' => $estado,
+                    'idcompraestado' => $idcompraestado
+                ];
+            }
+        }
+        return $arregloSalida;
+    }  
+
+
 }
