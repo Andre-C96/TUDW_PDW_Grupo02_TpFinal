@@ -39,7 +39,6 @@ class CompraControl
     }
 
     /**
-     * --- CORREGIDO PARA EVITAR EL ERROR DE OBJUSUARIO ---
      * Espera como parametro un arreglo asociativo 
      * @param array $param
      * @return Compra
@@ -48,7 +47,7 @@ class CompraControl
     {
         $obj = null;
 
-        // 1. Verificamos si viene el ID de compra para cargar una existente o crear vacía
+        // Verificamos si viene el ID de compra para cargar una existente o crear vacía
         if (array_key_exists('idcompra', $param) and $param['idcompra'] != null) {
             $obj = new Compra();
             $obj->setID($param['idcompra']);
@@ -59,7 +58,7 @@ class CompraControl
             $obj = new Compra();
         }
 
-        // 2. Asignamos el Usuario y la Fecha si el objeto es válido
+        // Asignamos el Usuario y la Fecha si el objeto es válido
         if ($obj != null) {
 
             // LOGICA ROBUSTA PARA EL USUARIO
@@ -89,7 +88,6 @@ class CompraControl
         return $obj;
     }
 
-    // Mantenemos este por compatibilidad si lo usas en otro lado
     private function cargarObjetoSinID($param)
     {
         $obj = null;
@@ -189,9 +187,7 @@ class CompraControl
         return $arreglo;
     }
 
-    /*############### FUNCIONES QUE UTILIZAN LOS ACTION #######################*/
-
-    /* LISTAR PRODUCTOS CARRITO (VERSIÓN SQL ROBUSTA) */
+    /* LISTAR PRODUCTOS CARRITO */
     // Usamos SQL directo para asegurarnos de traer 'proimagen' y 'precio'
     // aunque la clase Producto no esté actualizada.
     public function listadoProdCarrito($carrito)
