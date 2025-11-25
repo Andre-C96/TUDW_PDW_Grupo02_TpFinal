@@ -292,6 +292,42 @@ class CompraControl
         return $respuesta;
     }
 
+    /**
+     * Elimina un item verificando que pertenezca al usuario logueado.
+     * @param int $idCompraItem
+     * @param int $idUsuario
+     * @return boolean
+     */
+    public function eliminarProductoDelCarrito($idCompraItem, $idUsuario)
+    {
+        $compraItemCtrl = new CompraItemControl();
+        $uControl = new UsuarioControl();
+        $puede = true;
+
+        // Buscar el Item
+        $items = $compraItemCtrl->buscar(['idcompraitem' => $idCompraItem]);
+        if (empty($items)) {
+            $puede = false; 
+        }
+        $item = $items[0];
+        $idCompraDelItem = $item->getObjCompra()->getID();
+
+        // Buscar el Carrito del Usuario
+        $carrito = $uControl->obtenerCarrito($idUsuario);
+
+        // Verificar Propiedad 
+        if ($carrito == null || $carrito->getID() != $idCompraDelItem) {
+            $puede = false;
+        }
+
+        // Ejecutar Baja
+        if (!$puede) {
+            return false;
+        } else {
+            return $compraItemCtrl->baja(['idcompraitem' => $idCompraItem]);
+        }
+    }
+
     public function crearCarrito($idUser)
     {
         date_default_timezone_set('America/Argentina/Buenos_Aires');

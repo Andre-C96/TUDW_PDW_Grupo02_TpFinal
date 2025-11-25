@@ -54,7 +54,6 @@ class ComprobantePDF extends FPDF {
         $this->SetFont('Arial', 'B', 10);
         $this->Cell(0, 6, utf8_decode($nombreUser), 0, 1);
 
-        // --- ¡AQUÍ ESTABA EL ERROR! FALTABA IMPRIMIR EL ESTADO ---
         // Fila 2: Estado
         $this->SetFont('Arial', '', 10);
         $this->Cell(30, 6, 'Estado:', 0, 0);
