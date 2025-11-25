@@ -966,4 +966,23 @@ class CompraControl
         }
     }
 
+    /**
+     * Busca el carrito activo del usuario y devuelve sus productos.
+     * @param int $idUsuario
+     * @return array Lista de productos (con precio, cantidad, etc.)
+     */
+    public function obtenerProductosDelCarrito($idUsuario)
+    {
+        $uControl = new UsuarioControl();
+        $carrito = $uControl->obtenerCarrito($idUsuario);
+        $productos = [];
+
+        if ($carrito != null) {
+            // Si tiene carrito, usamos la función que ya existe para listar items
+            $productos = $this->listadoProdCarrito($carrito);
+        }
+
+        return $productos;
+    }
+
 }
