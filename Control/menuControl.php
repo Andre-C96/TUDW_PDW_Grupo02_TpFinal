@@ -135,14 +135,27 @@ class MenuControl
     {
         $resp = false;
         if ($this->seteadosCamposClaves($param)) {
-            $MRControl = new MenuRolControl();
-            $relacion = $MRControl->buscar(['idmenu'=>$param['idmenu']]);
-            if (!empty($relacion)){
-                foreach($relacion as $mrActual){
-                    $mrActual->eliminar(); //ELIMINAMOS TODAS LAS RELACIONES CON ROL ANTES DE ELIMINAR EL MENÚ
+            // Primero: si tiene hijos, eliminarlos recursivamente
+            $hijos = $this->tieneHijos($param['idmenu']);
+            if (!empty($hijos)) {
+                foreach ($hijos as $hijo) {
+                    $ok = $this->baja(['idmenu' => $hijo->getID()]);
+                    if (!$ok) {
+                        return false; // abortar si no podemos eliminar un hijo
+                    }
                 }
             }
 
+            // Eliminar relaciones menu-rol asociadas (si existen)
+            $MRControl = new MenuRolControl();
+            $relacion = $MRControl->buscar(['idmenu' => $param['idmenu']]);
+            if (!empty($relacion)) {
+                foreach ($relacion as $mrActual) {
+                    $mrActual->eliminar();
+                }
+            }
+
+            // Finalmente eliminar el propio menú
             $objMenu = $this->cargarObjetoConClave($param);
             if ($objMenu != null and $objMenu->eliminar()) {
                 $resp = true;
@@ -401,7 +414,7 @@ class MenuControl
     public function listarMenuesTabla()
     {
         $arreglo = [];
-        $list = $this->buscar(null);
+        $list = $this->buscar([]);
         if (count($list) > 0) {
             $menuRolControl = new MenuRolControl();
             $menuControl = new MenuControl();

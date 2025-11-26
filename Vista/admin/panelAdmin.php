@@ -25,6 +25,7 @@ if (!$isAdmin) {
     <div class="list-group mt-3">
         <a href="/TUDW_PDW_Grupo02_TpFinal/Vista/admin/cargarProducto.php" class="list-group-item list-group-item-action">Cargar productos</a>
         <a href="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Venta/listado.php" class="list-group-item list-group-item-action">Mis ventas</a>
+        <a href="/TUDW_PDW_Grupo02_TpFinal/Vista/Estructura/Accion/Menu/listado.php" class="list-group-item list-group-item-action">Administrar menús</a>
     
     </div>
 </div>

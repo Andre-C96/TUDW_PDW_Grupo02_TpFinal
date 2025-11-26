@@ -368,7 +368,7 @@ class UsuarioControl
     public function usuarioExiste($usname, $usmail)
     {
         $respuesta = false;
-        $list = $this->buscar(null);
+        $list = $this->buscar([]);
         foreach ($list as $usActual) {
             if (($usActual->getUsNombre() == $usname) || ($usActual->getUsMail() == $usmail)) {
                 $respuesta = true;
@@ -423,7 +423,7 @@ class UsuarioControl
             }
         } else {
             $rolC = new RolControl();
-            $list = $rolC->buscar(null);
+            $list = $rolC->buscar([]);
             foreach ($list as $rol){
                 $item = [
                     'text' => $rol->getRolDescripcion(),

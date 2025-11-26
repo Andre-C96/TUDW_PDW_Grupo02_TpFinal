@@ -465,7 +465,7 @@ class CompraControl
     {
         $arreglo = [];
         $objUsuarioControl = new UsuarioControl();
-        $users = $objUsuarioControl->buscar(null);
+        $users = $objUsuarioControl->buscar([]);
         if (count($users) > 0) {
             foreach ($users as $user) {
                 $arrDatos = $this->listarCompras($user->getID());
