@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/menuRolControl.php';
-require_once __DIR__ . '/menuControl.php';
+require_once __DIR__ . '/../Control/menuRolControl.php';
+require_once __DIR__ . '/../Control/menuControl.php';
 require_once __DIR__ . '/RouteMap.php';
-require_once __DIR__ . '/rolControl.php';
+require_once __DIR__ . '/../Control/rolControl.php';
 
 /**
  * Servicio que arma los datos del menú (left/right) para un rol dado.
