@@ -13,7 +13,7 @@
 require_once __DIR__ . '/../../Control/Session.php';
 require_once __DIR__ . '/../../Control/compraControl.php';
 require_once __DIR__ . '/../../Control/usuarioControl.php';
-require_once __DIR__ . '/../../Control/MenuRenderer.php';
+require_once __DIR__ . '/../../Util/MenuRenderer.php';
 require_once __DIR__ . '/../../Control/rolControl.php';
 
 $cartCount = 0;
