@@ -43,9 +43,12 @@ Frontend: HTML5, CSS3, Bootstrap 5
 Servidor Web: Apache (XAMPP/WAMP)
 
 Librerías Externas (Composer)
+
 Symfony Mailer: Para el envío de notificaciones de compra y actualizaciones de estado.
 
+
 Carbon: Para la gestión avanzada y formateo de fechas y zonas horarias.
+
 
 FPDF: Para la generación dinámica de comprobantes de compra en PDF.
 
