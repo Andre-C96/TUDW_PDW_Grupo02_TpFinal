@@ -1,8 +1,11 @@
 👥 Autores (Grupo 2)
 
 Andrea Crespillo	
+
 Lautaro Mellado	
+
 Ramiro Navarrete	
+
 Linda Cristal Parra Sanhueza	
 
 Trabajo realizado para la cátedra de Programación Web Dinámica - FAI-UNCO.
