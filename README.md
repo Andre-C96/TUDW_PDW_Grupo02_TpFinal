@@ -93,13 +93,12 @@ Protección: Hashing de contraseñas y validación de acceso en cada controlador
 
 📦 Instalación y Despliegue
 
-Sigue estos pasos para levantar el proyecto en tu entorno local:
+Seguir estos pasos para levantar el proyecto en tu entorno local:
 
 Clonar el repositorio:
 
-Bash
-
 git clone https://github.com/Andre-C96/TUDW_PDW_Grupo02_TpFinal.git
+
 Base de Datos:
 
 Crea una base de datos llamada bdcarritocompras en phpMyAdmin.
@@ -112,9 +111,8 @@ Asegurarse de tener Composer instalado.
 
 Ejecutar el siguiente comando en la raíz del proyecto para instalar las librerías:
 
-Bash
-
 composer install
+
 Configuración:
 
 Revisa el archivo config.php (si existe) o Control/Conector/BaseDatos.php para ajustar las credenciales de tu base de datos.
