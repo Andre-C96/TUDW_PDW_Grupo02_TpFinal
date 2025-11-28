@@ -64,7 +64,9 @@ Vista: Interfaz de usuario limpia y responsiva.
 Acción: Scripts delgados ("Thin Action") que solo reciben peticiones, invocan al controlador y redirigen, sin contener lógica de negocio.
 
 ✨ Funcionalidades Destacadas
+
 🛒 Módulo de Compras
+
 Carrito Persistente: El carrito se guarda en base de datos, permitiendo al usuario retomar su compra luego.
 
 Control de Stock: Validación en tiempo real antes de finalizar la compra. Descuento automático de stock.
@@ -74,6 +76,7 @@ Estados de Compra: Flujo completo: Iniciada (Carrito) -> Aceptada -> Enviada -> 
 Notificaciones: Envío automático de emails al confirmar compra o cambiar de estado.
 
 🛠️ Módulo de Administración
+
 Gestión de Menú Dinámico: El administrador puede crear ítems de menú y asignarles permisos (Roles) desde el panel, sin tocar código.
 
 ABM de Productos: Carga de productos con subida de imágenes, edición de stock y deshabilitado lógico (soft delete).
@@ -81,6 +84,7 @@ ABM de Productos: Carga de productos con subida de imágenes, edición de stock 
 Gestión de Ventas: Visualización de todas las ventas y cambio de estado con un clic.
 
 🔒 Seguridad y Sesiones
+
 Manejo de Sesiones: Clase Session personalizada para login, logout y control de inactividad.
 
 Roles y Permisos: Sistema escalable de permisos (menurol) que decide qué opciones ve cada usuario.
@@ -88,6 +92,7 @@ Roles y Permisos: Sistema escalable de permisos (menurol) que decide qué opcion
 Protección: Hashing de contraseñas y validación de acceso en cada controlador.
 
 📦 Instalación y Despliegue
+
 Sigue estos pasos para levantar el proyecto en tu entorno local:
 
 Clonar el repositorio:
